@@ -1,0 +1,294 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  ai-coach-api
+Transform:
+- AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 15
+    MemorySize: 256
+    Environment:
+      Variables:
+        PROFILES_TABLE: !Ref AiCoachProfilesTable
+        SESSIONS_TABLE: !Ref AiCoachSessionsTable
+        SUBMISSIONS_TABLE: !Ref AiCoachSubmissionsTable
+        OPENAI_API_KEY_PARAM: /ai-coach/openai_api_key
+
+
+
+  
+    LoggingConfig:
+      LogFormat: JSON
+
+Resources:
+
+  AiCoachApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'OPTIONS,GET,POST'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+
+
+  AiCoachProfilesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: AiCoachProfiles
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: deviceId
+          AttributeType: S
+        - AttributeName: profileId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: deviceId
+          KeyType: HASH
+        - AttributeName: profileId
+          KeyType: RANGE
+
+  AiCoachSessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: AiCoachSessions
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: profileId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sessionId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1ByProfile
+          KeySchema:
+            - AttributeName: profileId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  AiCoachSubmissionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: AiCoachSubmissions
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: submissionId
+          AttributeType: S
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: submissionId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1BySession
+          KeySchema:
+            - AttributeName: sessionId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+
+
+  CreateProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/createProfile.handler
+
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt AiCoachProfilesTable.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AiCoachApi
+            Path: /student/profile/create
+            Method: post
+
+
+
+  ListProfilesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/listProfiles.handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource: !GetAtt AiCoachProfilesTable.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AiCoachApi
+            Path: /student/profile/list
+            Method: get
+
+
+  CreateSessionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/createSession.handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt AiCoachSessionsTable.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AiCoachApi
+            Path: /session/create
+            Method: post
+
+
+
+  ListSessionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/listSessions.handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AiCoachSessionsTable.Arn
+                - !Sub "${AiCoachSessionsTable.Arn}/index/GSI1ByProfile"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AiCoachApi
+            Path: /session/list
+            Method: get
+
+
+  GenerateTopicFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/generateTopic.handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ai-coach/openai_api_key"
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+              Resource: "*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AiCoachApi
+            Path: /topic/generate
+            Method: post
+
+
+
+  EvaluateSubmissionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ai-coach-evaluate-submission
+      Handler: src//handlers/evaluateSubmission.handler
+      Runtime: nodejs22.x
+      MemorySize: 256
+      Timeout: 20
+      Environment:
+        Variables:
+          OPENAI_API_KEY_PARAM: /ai-coach/openai_api_key
+          OPENAI_MODEL: gpt-4.1-mini
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ai-coach/openai_api_key
+      Events:
+        EvaluateSubmission:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AiCoachApi
+            Path: /submission/evaluate
+            Method: post
+
+
+
+
+
+
+  CreateSubmissionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/createSubmission.handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt AiCoachSubmissionsTable.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AiCoachApi
+            Path: /submission/create
+            Method: post
+
+
+  ListSubmissionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/listSubmissions.handler
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AiCoachSubmissionsTable.Arn
+                - !Sub "${AiCoachSubmissionsTable.Arn}/index/GSI1BySession"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AiCoachApi
+            Path: /submission/list
+            Method: get
+
+
+
+Outputs:
+  WebEndpoint:
+    Description: API Gateway endpoint URL for Prod stage
+    Value: !Sub "https://${AiCoachApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Writing Coach – Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f6f7f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    .app {
+      max-width: 900px;
+      margin: auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 160px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #e5e7eb;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .muted {
+      color: #666;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .bar {
+      height: 10px;
+      background: #eee;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar > div {
+      height: 10px;
+      background: #333;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <h1>AI Writing Coach</h1>
+    <p class="muted">Practice essay writing and get clear feedback</p>
+
+    <!-- Topic -->
+    <div class="card">
+      <h3>1. Generate Topic</h3>
+
+      <label>Grade</label>
+      <select id="grade">
+        <option value="5">Grade 5</option>
+        <option value="6">Grade 6</option>
+        <option value="7" selected>Grade 7</option>
+        <option value="8">Grade 8</option>
+        <option value="9">Grade 9</option>
+      </select>
+
+      <button onclick="generateTopic()">Generate Topic</button>
+
+      <div id="topicOut" class="muted" style="margin-top:12px">(no topic yet)</div>
+    </div>
+
+    <!-- Essay -->
+    <div class="card">
+      <h3>2. Write Essay</h3>
+      <textarea id="essay" placeholder="Write or paste your essay here..."></textarea>
+      <button onclick="evaluateEssay()">Evaluate Essay</button>
+    </div>
+
+    <!-- Evaluation -->
+    <div class="card">
+      <h3>3. Evaluation</h3>
+      <div id="evalOut" class="muted">(no evaluation yet)</div>
+    </div>
+  </div>
+
+<script>
+const API_BASE = "https://fs3znp8pfa.execute-api.us-east-1.amazonaws.com/Prod";
+
+const $ = (id) => document.getElementById(id);
+
+async function generateTopic() {
+  $("topicOut").textContent = "Generating topic...";
+  $("evalOut").textContent = "(no evaluation yet)";
+
+  const grade = Number($("grade").value);
+
+  const res = await fetch(API_BASE + "/topic/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ grade })
+  });
+
+  const data = await res.json();
+  renderTopic(data);
+}
+
+function renderTopic(t) {
+  if (!t.ok) {
+    $("topicOut").textContent = "Failed to generate topic";
+    return;
+  }
+
+  const tags = t.tags.map(x => `<span class="badge">${x}</span>`).join("");
+  const paras = t.paragraphStructure
+    .map(p => `<li><strong>${p.paragraph}</strong>: ${p.guidance}</li>`)
+    .join("");
+
+  $("topicOut").innerHTML = `
+    <h4>${t.title}</h4>
+    <p>${t.prompt}</p>
+    <p><strong>Target word count:</strong> ${t.wordCount}</p>
+    <div>${tags}</div>
+    <ol>${paras}</ol>
+  `;
+}
+
+async function evaluateEssay() {
+  $("evalOut").textContent = "Evaluating essay...";
+
+  const grade = Number($("grade").value);
+  const essayText = $("essay").value;
+
+  const res = await fetch(API_BASE + "/submission/evaluate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ grade, essayText })
+  });
+
+  const e = await res.json();
+  renderEvaluation(e);
+}
+
+function renderEvaluation(e) {
+  if (!e.ok) {
+    $("evalOut").textContent = "Evaluation failed";
+    return;
+  }
+
+  const row = (name, v) => `
+    <tr>
+      <td>${name}</td>
+      <td>${v}/25</td>
+      <td>
+        <div class="bar">
+          <div style="width:${(v/25)*100}%"></div>
+        </div>
+      </td>
+    </tr>
+  `;
+
+  $("evalOut").innerHTML = `
+    <h4>Overall Score: ${e.score}/100</h4>
+
+    <table>
+      <tr><th>Category</th><th>Score</th><th>Progress</th></tr>
+      ${row("Ideas", e.rubric.ideas)}
+      ${row("Organization", e.rubric.organization)}
+      ${row("Voice", e.rubric.voice)}
+      ${row("Conventions", e.rubric.conventions)}
+    </table>
+
+    <div class="row">
+      <div class="card">
+        <strong>Strengths</strong>
+        <ul>${e.strengths.map(x => `<li>${x}</li>`).join("")}</ul>
+      </div>
+      <div class="card">
+        <strong>Issues</strong>
+        <ul>${e.issues.map(x => `<li>${x}</li>`).join("")}</ul>
+      </div>
+      <div class="card">
+        <strong>Next Steps</strong>
+        <ul>${e.nextSteps.map(x => `<li>${x}</li>`).join("")}</ul>
+      </div>
+    </div>
+
+    <p><strong>Revision Suggestion</strong><br/>${e.revisionSuggestion}</p>
+    <p><strong>Teacher Comment</strong><br/>${e.teacherComment}</p>
+  `;
+}
+</script>
+</body>
+</html>

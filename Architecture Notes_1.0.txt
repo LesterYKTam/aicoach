@@ -1,0 +1,430 @@
+Architecture Notes v0.1 — Writing Coach App (Grades 1–8)
+
+Date: 2026-01-13
+Scope: MVP for Writing Coach (Essay/Story). Designed to expand to Math Coach later.
+
+1) Product Vision
+
+Build an app that actually improves kids’ writing (Grade 1–8) by combining:
+
+Clear, grade-appropriate writing tasks
+
+Student-friendly feedback that is actionable + encouraging
+
+Progress-aware coaching using stored history (because LLM APIs are stateless)
+
+Parent view that is more honest and expectation-oriented
+
+Success metric for MVP:
+After 1 month of real use (trial with kid), writing improves measurably and the kid stays motivated to write.
+
+2) Core User Flow
+
+Generate a topic / task
+
+Kid writes (essay/story)
+
+AI gives comments (student view + parent view)
+
+3) Key Product Principles
+3.1 Feedback quality is the #1 priority
+
+The app survives only if feedback consistently helps kids improve.
+
+3.2 Suggestions must be actionable
+
+Feedback focuses on what the student can do better next time, not just error-correction.
+Limit “next steps” to 2–3 max to avoid overwhelm.
+
+3.3 Encouragement is mandatory and evidence-based
+
+Always highlight:
+
+What the student did well (specific)
+
+What improved vs previous work (when grounded in stored history)
+
+3.4 Two audiences, two renderings
+
+Student feedback: encouraging, simple, forward-looking, no harsh labels
+
+Parent feedback: more honest, includes strengths/weaknesses + where the child stands vs expectations
+
+(One internal evaluation → two views.)
+
+3.5 Visible requirements help students write better
+
+UI shows a simple checklist (grade-adjusted), e.g.:
+
+100+ words
+
+Intro
+
+2 reasons
+
+Conclusion
+
+This anchors both writing and feedback.
+
+4) Curriculum / Grade Expectations Strategy
+4.1 Grade ≠ expectation (future-proofing)
+
+Different regions/countries may have different expectations for “Grade 5”.
+
+4.2 Student profile includes curriculum context
+
+Default curriculum for MVP: Canada, Ontario public (represented by a code).
+
+curriculumCode: e.g. CA-ON-PUBLIC
+
+4.3 Phase 1 approach for requirements/expectations
+
+Requirements are config-driven (DB or JSON config), not hard-coded across UI and prompts.
+
+Start with grade bands if needed (G1–2, G3–5, G6–8), refine later.
+
+4.4 Syllabus citation feature (later phase)
+
+Parent feedback may later reference official syllabus language for credibility.
+Not in MVP.
+Reason: runtime web lookup is risky and inconsistent; syllabus should be curated offline into a stable expectation layer.
+
+5) System Architecture
+5.1 Platform
+
+AWS-first (chosen for speed/familiarity), architecture kept cloud-agnostic.
+
+5.2 Compute
+
+AWS Lambda for backend:
+
+Stateless functions triggered on demand
+
+Scales with usage
+
+Cost-efficient for MVP
+
+5.3 API Layer
+
+API Gateway → Lambda handlers
+
+5.4 Database
+
+PostgreSQL (RDS) chosen over MongoDB:
+
+Relational structure fits student → submission → feedback
+
+Strong support for progress/trends (future parent reports)
+
+Use JSONB for flexible evolving fields (taskSpec/resultSpec/raw output)
+
+5.5 Memory Strategy (critical)
+
+LLM API is stateless → database is the system memory.
+Before feedback calls, backend builds a compact StudentSnapshot from stored history.
+
+5.6 AI Provider (MVP)
+
+Use OpenAI for v1.
+
+Design a provider abstraction so we can re-run the dataset later with other models (Claude/Gemini/etc.) without rewrites.
+
+6) MVP Feature Scope
+Must-have (v1)
+
+Student profile (minimal: grade + curriculumCode default + language)
+
+Topic/task generation
+
+Writing submission
+
+Feedback (student + parent view)
+
+Store all submissions + feedback results
+
+Progress-aware comments using StudentSnapshot (compare vs previous)
+
+UI shows grade-appropriate checklist requirements
+
+Not required for MVP (later)
+
+Teacher dashboard
+
+Multi-country curriculum library
+
+Syllabus citations
+
+Parent progress charts/reporting (but store metrics to enable it)
+
+Math coach
+
+Multi-model comparison UI (manual replay later is fine)
+
+Gamification
+
+7) Data Model (Conceptual)
+
+Design supports multi-subject “coaches” later via coachType.
+
+7.1 StudentProfile
+
+id
+
+displayName (nickname)
+
+gradeLevel (1–8)
+
+curriculumCode (default CA-ON-PUBLIC)
+
+language (default en)
+
+optional later: interests/tags
+
+7.2 Task (Assignment)
+
+Represents the generated prompt + requirements.
+
+id
+
+studentId
+
+coachType (writing now; math later)
+
+taskSpec (JSONB)
+
+writing example: {prompt, genre, targetWords, structureRequirements, checklist}
+
+createdAt
+
+rubricVersion
+
+promptVersion
+
+7.3 Submission
+
+What the student submits.
+
+id
+
+taskId
+
+studentId
+
+coachType
+
+responseSpec (JSONB)
+
+writing: {text}
+
+derived stats: wordCount, sentenceCount (optional)
+
+createdAt
+
+7.4 FeedbackResult
+
+Canonical evaluation + rendered views.
+
+id
+
+submissionId
+
+studentId
+
+coachType
+
+query-friendly columns (for progress later):
+
+overallBand (e.g. A/B/C or 1–5)
+
+vocabularyScore, grammarScore, sentenceStructureScore, flowScore, reasoningScore
+
+expectationBand per category (below|approaching|meeting|above) (parent-facing)
+
+deltas vs previous (per category)
+
+strengthTags[], weaknessTags[], focusGoals[]
+
+flex fields (JSONB):
+
+resultSpec (full structured output)
+
+rawModelOutput (optional)
+
+studentSnapshotUsed
+
+versioning:
+
+modelProvider, modelName
+
+promptVersion, rubricVersion
+
+optional: temperature
+
+createdAt
+
+8) StudentSnapshot (LLM Memory Payload)
+
+Generated from DB before evaluation call.
+
+Contains:
+
+last category scores
+
+trend/deltas (recent)
+
+top recurring issues (3)
+
+top strengths (2)
+
+recent focus goals (1–2)
+
+Snapshot is small, consistent, and prevents hallucinated “progress” claims.
+
+9) Feedback Output Contract (Structured)
+
+Single canonical evaluation, then render:
+
+9.1 Student View
+
+1–2 sentence encouragement
+
+strengths (2 bullets)
+
+next steps (2–3 bullets, actionable)
+
+optional: one-sentence rewrite example only (never rewrite entire essay)
+
+progress mention if grounded in snapshot
+
+9.2 Parent View
+
+Includes student view +:
+
+expectation bands per category
+
+clear strengths and weaknesses
+
+“where the child is vs expected for grade/curriculum”
+
+progress trajectory summary (honest, neutral tone)
+
+(no official syllabus references in MVP)
+
+10) Writing Requirements / Checklist System
+
+Different grades require different checklists.
+
+Phase 1: store requirements by:
+
+curriculumCode
+
+coachType
+
+grade (or gradeBand)
+
+genre
+
+Return requirements to:
+
+UI checklist display
+
+evaluator prompt (so feedback matches what student saw)
+
+11) API Endpoints (MVP)
+
+Keep minimal:
+
+POST /topic
+
+input: studentId (or grade+curriculum), genre
+
+output: task prompt + checklist requirements
+
+POST /submit
+
+input: studentId, taskId (or prompt snapshot), text
+
+backend:
+
+fetch last feedback → build StudentSnapshot
+
+call OpenAI → structured feedback JSON
+
+store submission + feedback
+
+return student view + parent view
+
+Optional later:
+
+GET /students/:id/submissions
+
+GET /students/:id/progress
+
+12) Environments & Deployment
+
+Decision: Start dev on AWS Day 1 to avoid late infra surprises, but still allow local speed where useful.
+
+12.1 AWS Dev (Day 1)
+
+API Gateway
+
+Lambda functions
+
+RDS Postgres
+
+RDS Proxy (recommended for Lambda + Postgres)
+
+Secrets Manager / SSM for OPENAI_API_KEY + DB creds
+
+CloudWatch logs
+
+12.2 Local Support (optional but useful)
+
+sam local start-api
+
+Docker Postgres for quick iteration
+
+Use one template (SAM) for both local and AWS deploy.
+
+13) Versioning & Observability (MVP discipline)
+
+Store per feedback:
+
+modelName, modelProvider
+
+promptVersion, rubricVersion
+
+request/latency/token usage (if available)
+
+avoid logging raw student text unless necessary (privacy)
+
+Versioning is critical so improvements don’t break comparability across time.
+
+14) Future Roadmap (High Level)
+Phase 2
+
+Parent progress reports (charts + summaries)
+
+More detailed expectation mapping per grade
+
+Add more curricula (other provinces/countries)
+
+Phase 3
+
+Syllabus-cited parent feedback (offline curated curriculum library)
+
+Model-provider comparison tooling (replay dataset across providers)
+
+Phase 4
+
+Math Coach (same task/submission/feedback framework; different rubric)
+
+15) Open Questions (for next sessions)
+
+Exact scoring scale (0–5 vs 0–4) and mapping to expectation bands
+
+Minimum viable grade coverage: per-grade vs grade bands
+
+Choice of migration tool (Prisma/Knex/etc.)
+
+Authentication approach (if any) for MVP trial

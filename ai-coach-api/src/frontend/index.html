@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Coach – Prototype</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; max-width: 1000px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    label { font-weight: 600; }
+    input, textarea, button { font-size: 14px; }
+    input { padding: 6px 8px; width: 100px; }
+    textarea { width: 100%; height: 180px; padding: 10px; line-height: 1.4; }
+    button { padding: 8px 12px; cursor: pointer; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-top: 12px; }
+    pre { background: #f6f6f6; padding: 12px; border-radius: 8px; overflow: auto; }
+    .muted { color: #666; font-size: 13px; }
+    .error { color: #b00020; font-weight: 600; }
+    .ok { color: #0b6b0b; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h2>AI Coach – Super Simple Prototype</h2>
+  <div class="card">
+    <div class="row">
+      <label>API Base URL:</label>
+      <input id="baseUrl" style="width: 520px" value="https://fs3znp8pfa.execute-api.us-east-1.amazonaws.com/Prod" />
+    </div>
+    <p class="muted">Calls: <code>POST /topic/generate</code> and <code>POST /submission/evaluate</code></p>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <label>Grade:</label>
+      <input id="grade" type="number" min="1" max="12" value="7" />
+      <button id="btnTopic">Generate Topic</button>
+      <button id="btnEvaluate">Evaluate Essay</button>
+      <span id="status" class="muted"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Topic</h3>
+    <div id="topicOut" class="muted">(no topic yet)</div>
+  </div>
+
+  <div class="card">
+    <h3>Essay</h3>
+    <textarea id="essayText" placeholder="Paste your essay here..."></textarea>
+  </div>
+
+  <div class="card">
+    <h3>Evaluation Result</h3>
+    <pre id="evalOut" class="muted">(no evaluation yet)</pre>
+  </div>
+
+
+  <div class="card">
+  <h3>Raw HTTP Response (Debug)</h3>
+  <pre id="rawOut" class="muted">(no response yet)</pre>
+</div>
+
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function setStatus(msg, kind = "muted") {
+    const el = $("status");
+    el.className = kind;
+    el.textContent = msg;
+  }
+
+  async function postJson(url, data) {
+    let res;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+    } catch (err) {
+      // Network / CORS failure → fetch never completed
+      $("rawOut").textContent =
+        "FETCH FAILED (no HTTP response)\n\n" +
+        err.toString();
+      throw err;
+    }
+
+    const headers = {};
+    res.headers.forEach((v, k) => headers[k] = v);
+
+    const text = await res.text();
+
+    $("rawOut").textContent =
+      `HTTP ${res.status} ${res.statusText}\n\n` +
+      `Headers:\n${JSON.stringify(headers, null, 2)}\n\n` +
+      `Body:\n${text}`;
+
+    let json = null;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      // Not JSON — return raw text
+      return text;
+    }
+
+    if (!res.ok) {
+      const msg = json?.error || json?.message || text || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+
+    return json;
+  }
+
+  $("btnTopic").addEventListener("click", async () => {
+    try {
+      setStatus("Generating topic...");
+      $("topicOut").textContent = "";
+      const base = $("baseUrl").value.replace(/\/$/, "");
+      const grade = Number($("grade").value);
+
+      const out = await postJson(`${base}/topic/generate`, { grade });
+      renderTopic(out);
+
+
+      // convenience: if prompt exists, prefill essay area with a starter template
+      if (out?.prompt) {
+        const starter =
+`INTRO: (1-2 sentences) State your opinion.
+BODY 1: Reason 1 + example.
+BODY 2: Reason 2 + example.
+CONCLUSION: Summarize + final thought.
+
+Topic prompt:
+${out.prompt}
+
+Start writing below:
+`;
+        if (!$("essayText").value.trim()) $("essayText").value = starter;
+      }
+
+      setStatus("Topic generated.", "ok");
+    } catch (err) {
+      setStatus(`Topic error: ${err.message}`, "error");
+      $("topicOut").textContent = "(error)";
+    }
+  });
+
+  $("btnEvaluate").addEventListener("click", async () => {
+    try {
+      setStatus("Evaluating essay...");
+      $("evalOut").textContent = "";
+      const base = $("baseUrl").value.replace(/\/$/, "");
+      const grade = Number($("grade").value);
+      const essayText = $("essayText").value.trim();
+
+      if (essayText.length < 50) throw new Error("Essay is too short (need at least ~50 characters).");
+
+      const out = await postJson(`${base}/submission/evaluate`, { grade, essayText, submissionId: "ui-test" });
+      $("evalOut").textContent = JSON.stringify(out, null, 2);
+
+      setStatus("Evaluation complete.", "ok");
+    } catch (err) {
+      setStatus(`Evaluate error: ${err.message}`, "error");
+      $("evalOut").textContent = "(error)";
+    }
+  });
+
+
+
+  function renderTopic(topic) {
+  if (!topic || !topic.ok) {
+    $("topicOut").textContent = "(invalid topic)";
+    return;
+  }
+
+  const tags = (topic.tags || [])
+    .map(t => `<span style="display:inline-block;background:#eef;padding:4px 8px;border-radius:12px;margin:2px;font-size:12px">${t}</span>`)
+    .join(" ");
+
+  const paragraphs = (topic.paragraphStructure || [])
+    .map(p => `
+      <li>
+        <strong>${p.paragraph}</strong><br/>
+        <span class="muted">${p.guidance}</span>
+      </li>
+    `)
+    .join("");
+
+  $("topicOut").innerHTML = `
+    <h3 style="margin-top:0">${topic.title}</h3>
+
+    <p><strong>Essay Prompt</strong></p>
+    <p>${topic.prompt}</p>
+
+    <p><strong>Target Word Count:</strong> ${topic.wordCount}</p>
+
+    <p><strong>Tags:</strong><br/>${tags}</p>
+
+    <p><strong>Paragraph Structure:</strong></p>
+    <ol>${paragraphs}</ol>
+  `;
+}
+
+</script>
+</body>
+</html>
+
+
+
