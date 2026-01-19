@@ -1,0 +1,153 @@
+{
+  "location1": "canada",
+  "location2": "ontrio",
+  "grade": 7,
+  "mode": "training",
+  "language": "en-CA",
+  "totalScore": 100,
+  "researchRequired": false,
+  "taskTypeDefault": "opinion_debatable",
+
+  "categories": [
+    {
+      "name": "Knowledge & Understanding",
+      "weight": 20,
+      "criteria": [
+        "Clear position on the topic",
+        "Understanding of the question",
+        "Writing stays focused on the chosen side"
+      ]
+    },
+    {
+      "name": "Thinking",
+      "weight": 25,
+      "criteria": [
+        "Logical organization of arguments",
+        "Development of ideas",
+        "Uses reasons with explanations (why/how) and relevant examples",
+        "Acknowledges at least one opposing viewpoint and explains why the chosen position is stronger"
+      ]
+    },
+    {
+      "name": "Communication & Structure",
+      "weight": 35,
+      "criteria": [
+        "Clarity of ideas",
+        "Logical paragraph structure",
+        "Introduction clearly states the position",
+        "At least three body paragraphs",
+        "One main argument per body paragraph",
+        "Each body paragraph includes explanation and an example",
+        "Conclusion reinforces the position and summarizes key points",
+        "Transitions between arguments and paragraphs"
+      ],
+      "requiredStructure": {
+        "introduction": true,
+        "minBodyParagraphs": 3,
+        "bodyParagraphRules": {
+          "oneMainArgument": true,
+          "requiresExplanation": true,
+          "requiresExample": true
+        },
+        "conclusion": true,
+        "counterpointRequired": true
+      }
+    },
+    {
+      "name": "Application",
+      "weight": 20,
+      "criteria": [
+        "Grammar",
+        "Capitalization",
+        "Punctuation",
+        "Spelling",
+        "Vocabulary use (clear, precise, age-appropriate)",
+        "Some sentence variety"
+      ]
+    }
+  ],
+
+  "trainingRules": {
+    "structureRequired": true,
+    "missingStructureScoreCap": 65,
+    "rewriteRequiredBelow": 70,
+    "counterpointMissingPenalty": {
+      "enabled": true,
+      "deductPoints": 10,
+      "note": "If the essay does not include an opposing viewpoint/counterpoint, subtract points even if structure is otherwise complete."
+    }
+  },
+
+  "scoreMeaning": [
+    {
+      "range": "85-100",
+      "description": "Strong arguments with clear structure and mature development, as appropriate for the student's grade"
+    },
+    {
+      "range": "70-84",
+      "description": "Good position and structure; development or counterpoint needs improvement, as appropriate for the student's grade"
+    },
+    {
+      "range": "60-69",
+      "description": "Structure and/or argument development is incomplete; rewrite required, based on grade-level expectations"
+    },
+    {
+      "range": "0-59",
+      "description": "Major gaps in grade-level writing fundamentals and argument structure"
+    }
+  ],
+
+  "gradingPrinciples": [
+    "All evaluations must be based on expectations appropriate for the student's grade level.",
+    "Do not apply higher-grade or adult writing standards.",
+    "Apply spelling, vocabulary, and language conventions according to the specified language variant.",
+    "Because research is not required, do not penalize the student for not citing sources or including facts beyond common knowledge and personal experience."
+  ],
+
+  "topicProfile": {
+    "researchRequired": false,
+    "promptTone": "school_safe_neutral",
+    "readingLevel": "grade_7",
+
+    "supportedTaskTypes": [
+      "opinion_debatable",
+      "informative_explanatory",
+      "narrative_personal"
+    ],
+
+    "mixRules": {
+      "nTopics": 10,
+      "targetDistribution": {
+        "opinion_debatable": 4,
+        "informative_explanatory": 4,
+        "narrative_personal": 2
+      },
+      "avoidNearDuplicates": true
+    },
+
+    "softGuidelines": [
+      "Prefer topics connected to student life or school life",
+      "Topics should be answerable without external research",
+      "Keep prompts concrete and age-appropriate"
+    ],
+
+    "avoidTopics": [
+      "sexual orientation or gender identity",
+      "religion",
+      "race or ethnicity",
+      "political parties or elections",
+      "war or graphic violence",
+      "explicit sexual content",
+      "medical or mental health diagnoses"
+    ],
+
+    "outputFormat": {
+      "eachTopicIncludes": [
+        "taskType",
+        "topicTitle",
+        "prompt",
+        "structureHint"
+      ]
+    }
+  }
+}

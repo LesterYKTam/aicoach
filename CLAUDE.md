@@ -6,98 +6,142 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AI Writing Coach - an educational app that improves K-8 students' essay writing through AI-powered feedback. The system generates grade-appropriate essay topics, evaluates student submissions, and provides dual-audience feedback (encouraging for students, honest for parents).
 
+## Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Database**: PostgreSQL (Neon for production, local Postgres for dev)
+- **ORM**: Prisma
+- **AI**: OpenAI (gpt-4.1-mini)
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Deployment**: Docker (AWS App Runner or Azure Container Apps)
+
 ## Repository Structure
 
 ```
 aicoach/
-├── ai-coach-api/     # AWS SAM serverless backend (Node.js Lambda functions)
-├── ai-coach-ui/      # React + TypeScript frontend (Vite)
-├── UI/               # Static HTML prototypes
-└── Architecture Notes_1.0.txt  # Product requirements and architecture decisions
+├── app/                    # Next.js App Router
+│   ├── layout.tsx
+│   ├── page.tsx            # Main writing coach UI
+│   ├── globals.css
+│   └── api/                # API routes
+│       ├── student/profile/{create,list}/
+│       ├── session/{create,list}/
+│       ├── topic/generate/
+│       └── submission/{create,list,evaluate}/
+├── components/ui/          # shadcn/ui components
+├── lib/
+│   ├── db.ts               # Prisma client
+│   ├── openai.ts           # OpenAI client
+│   └── utils.ts            # Utilities
+├── prisma/
+│   └── schema.prisma       # Database schema
+├── rubric/                 # Grading rubrics (JSON)
+│   └── rubric_canada_ontrio_2026.json
+├── Dockerfile
+├── docker-compose.yml      # Local dev with Postgres
+└── package.json
 ```
 
 ## Commands
 
-### Backend (ai-coach-api/)
-
 ```bash
-cd ai-coach-api
-
-# Install dependencies
-npm install
-
-# Run tests (Jest with ES modules)
-npm test
-
-# Build SAM application
-sam build
-
-# Run API locally (requires Docker)
-sam local start-api
-
-# Deploy to AWS
-sam deploy
-
-# View logs
-sam logs -n <FunctionName> --stack-name ai-coach-dev --tail
-
-# Delete stack
-sam delete --stack-name ai-coach-dev
-```
-
-### Frontend (ai-coach-ui/)
-
-```bash
-cd ai-coach-ui
-
 # Install dependencies
 npm install
 
 # Run dev server
 npm run dev
 
-# Type check and build
+# Database
+npx prisma migrate dev    # Apply migrations
+npx prisma db push        # Push schema (no migration)
+npx prisma studio         # DB browser
+npx prisma generate       # Generate client
+
+# Build
 npm run build
 
 # Lint
 npm run lint
+
+# Docker (local full stack)
+docker-compose up         # Start app + Postgres
+docker-compose up -d      # Detached mode
+docker-compose down       # Stop
 ```
 
-## Architecture
+## Database Schema
 
-### Backend
-- **Runtime**: Node.js 22 on AWS Lambda
-- **Infrastructure**: AWS SAM (template.yaml defines all resources)
-- **Database**: DynamoDB with three tables:
-  - `AiCoachProfiles` - Student profiles (deviceId + profileId)
-  - `AiCoachSessions` - Writing sessions (GSI by profileId)
-  - `AiCoachSubmissions` - Essay submissions (GSI by sessionId)
-- **AI Provider**: OpenAI (gpt-4.1-mini) via structured JSON output
-- **Secrets**: OpenAI API key stored in AWS SSM Parameter Store at `/ai-coach/openai_api_key`
+```prisma
+model Profile {
+  id          String    @id @default(uuid())
+  deviceId    String
+  displayName String?
+  grade       Int?
+  sessions    Session[]
+  @@index([deviceId])
+}
 
-### API Endpoints
-- `POST /student/profile/create` - Create student profile
-- `GET /student/profile/list` - List profiles by deviceId
-- `POST /session/create` - Create writing session
-- `GET /session/list` - List sessions by profileId
-- `POST /topic/generate` - Generate essay topic with structure guidance
-- `POST /submission/create` - Save essay submission
-- `GET /submission/list` - List submissions by sessionId
-- `POST /submission/evaluate` - AI-powered essay evaluation
+model Session {
+  id          String       @id @default(uuid())
+  profileId   String
+  topic       String?
+  status      String       @default("active")
+  submissions Submission[]
+  @@index([profileId, createdAt])
+}
 
-### Frontend
-- **Framework**: React 19 + TypeScript
-- **Build**: Vite (using rolldown-vite)
-- **API Base**: Configurable via `VITE_API_BASE` env var, defaults to deployed AWS endpoint
+model Submission {
+  id         String   @id @default(uuid())
+  sessionId  String
+  essayText  String
+  evaluation Json?
+  @@index([sessionId, createdAt])
+}
+```
 
-### Key Design Patterns
-- Lambda handlers use cached OpenAI client (cold start optimization)
-- OpenAI calls use JSON Schema for structured output (see `evaluationSchema` in evaluateSubmission.js)
-- Topic generation produces 4-paragraph essay structure (Intro, Body 1, Body 2, Conclusion)
-- Evaluation uses 100-point rubric: Ideas (25), Organization (25), Voice (25), Conventions (25)
-- All handlers include CORS headers for cross-origin requests
+## API Endpoints
 
-## Configuration Files
-- `ai-coach-api/samconfig.toml` - SAM deployment config (stack name, region)
-- `ai-coach-api/env.json` - Local Lambda environment variables
-- `ai-coach-ui/.env` - Frontend environment (VITE_API_BASE)
+| Route | Method | Description |
+|-------|--------|-------------|
+| /api/student/profile/create | POST | Create student profile |
+| /api/student/profile/list | GET | List profiles by deviceId |
+| /api/session/create | POST | Create writing session |
+| /api/session/list | GET | List sessions by profileId |
+| /api/topic/generate | POST | Generate essay topic with AI |
+| /api/submission/create | POST | Save essay submission |
+| /api/submission/list | GET | List submissions by sessionId |
+| /api/submission/evaluate | POST | AI-powered essay evaluation |
+
+## Key Design Patterns
+
+- Prisma client is cached globally to avoid connection exhaustion
+- OpenAI client is cached globally for efficiency
+- OpenAI calls use JSON Schema for structured output
+- Topic generation produces 4-paragraph essay structure
+- Evaluation uses Ontario curriculum rubric (100 points):
+  - Knowledge & Understanding (20)
+  - Thinking (20)
+  - Communication & Structure (35)
+  - Application (25)
+- Rubric files stored in `rubric/` folder (JSON format)
+- Structure requirements enforced: intro, 2+ body paragraphs, conclusion
+- Score capped at 65 if structure incomplete; rewrite required if < 70
+
+## Environment Variables
+
+```bash
+# Required
+DATABASE_URL="postgresql://..."  # Neon or local Postgres
+OPENAI_API_KEY="sk-..."
+
+# Optional
+OPENAI_MODEL="gpt-4.1-mini"      # Default model
+```
+
+## Archived Folders
+
+The following folders contain the old Lambda + DynamoDB implementation and are kept for reference:
+- `ai-coach-api/` - AWS SAM serverless backend
+- `ai-coach-ui/` - Vite React frontend
+- `UI/` - Static HTML prototypes

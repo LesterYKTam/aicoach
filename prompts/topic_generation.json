@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "description": "General topic generation prompt template - combined with grade-specific profiles",
+
+  "systemPrompt": {
+    "role": "You are a creative and thoughtful essay topic generator for K-12 students.",
+    "coreRules": [
+      "Generate unique, creative, school-appropriate essay topics",
+      "Never repeat the same topic twice",
+      "All topics must be safe for classroom use",
+      "Topics should be engaging and age-appropriate",
+      "Return JSON that matches the schema exactly"
+    ]
+  },
+
+  "defaultSettings": {
+    "temperature": 1.2,
+    "promptTone": "school_safe_neutral",
+    "researchRequired": false
+  },
+
+  "defaultAvoidTopics": [
+    "sexual orientation or gender identity",
+    "religion",
+    "race or ethnicity",
+    "political parties or elections",
+    "war or graphic violence",
+    "explicit sexual content",
+    "medical or mental health diagnoses"
+  ],
+
+  "defaultSubjectAreas": [
+    "science",
+    "nature",
+    "history",
+    "technology",
+    "community",
+    "family",
+    "hobbies",
+    "animals",
+    "sports",
+    "holidays",
+    "imagination",
+    "school life",
+    "friendship",
+    "environment",
+    "arts and creativity"
+  ],
+
+  "taskTypeDescriptions": {
+    "opinion_simple": "A topic where the student shares their opinion with simple reasons and examples (no counterargument needed)",
+    "opinion_debatable": "A topic where the student takes a clear position, argues for it with reasons and examples, and addresses a counterpoint",
+    "informative_explanatory": "A topic where the student explains or describes something clearly with facts and details",
+    "narrative_personal": "A topic where the student tells a personal story or experience"
+  },
+
+  "wordCountByGrade": {
+    "1": 60,
+    "2": 80,
+    "3": 100,
+    "4": 130,
+    "5": 160,
+    "6": 200,
+    "7": 250,
+    "8": 300,
+    "9": 350,
+    "10": 400,
+    "11": 450,
+    "12": 500
+  },
+
+  "paragraphStructureByGrade": {
+    "default": {
+      "count": 4,
+      "structure": ["Introduction", "Body Paragraph 1", "Body Paragraph 2", "Conclusion"]
+    },
+    "7-12": {
+      "count": 5,
+      "structure": ["Introduction", "Body Paragraph 1", "Body Paragraph 2", "Body Paragraph 3", "Conclusion"]
+    }
+  },
+
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "taskType": {
+        "type": "string",
+        "description": "The type of essay task"
+      },
+      "title": {
+        "type": "string",
+        "description": "Short, catchy topic title"
+      },
+      "prompt": {
+        "type": "string",
+        "description": "Clear instructions for the essay"
+      },
+      "tags": {
+        "type": "array",
+        "items": { "type": "string" },
+        "minItems": 2,
+        "maxItems": 8,
+        "description": "Theme tags for the topic"
+      },
+      "wordCount": {
+        "type": "integer",
+        "minimum": 50,
+        "maximum": 800,
+        "description": "Target word count for the essay"
+      },
+      "paragraphStructure": {
+        "type": "array",
+        "minItems": 4,
+        "maxItems": 5,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paragraph": { "type": "string" },
+            "guidance": { "type": "string" }
+          },
+          "required": ["paragraph", "guidance"]
+        },
+        "description": "Structure guidance for each paragraph"
+      }
+    },
+    "required": ["taskType", "title", "prompt", "tags", "wordCount", "paragraphStructure"]
+  }
+}

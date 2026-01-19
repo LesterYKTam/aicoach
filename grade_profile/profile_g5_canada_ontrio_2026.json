@@ -1,0 +1,142 @@
+{
+  "location1": "canada",
+  "location2": "ontrio",
+  "grade": 5,
+  "mode": "training",
+  "language": "en-CA",
+  "totalScore": 100,
+
+  "categories": [
+    {
+      "name": "Knowledge & Understanding",
+      "weight": 20,
+      "criteria": [
+        "Topic clarity",
+        "Understanding of the task",
+        "Writing stays on topic"
+      ]
+    },
+    {
+      "name": "Thinking",
+      "weight": 20,
+      "criteria": [
+        "Organization of ideas",
+        "Development of ideas",
+        "Use of reasons, examples, or explanations"
+      ]
+    },
+    {
+      "name": "Communication & Structure",
+      "weight": 35,
+      "criteria": [
+        "Clarity of ideas",
+        "Logical paragraph structure",
+        "Effective introduction",
+        "At least two body paragraphs",
+        "One main idea per body paragraph",
+        "Supporting sentences in each body paragraph",
+        "Clear conclusion",
+        "Transitions between ideas and paragraphs"
+      ],
+      "requiredStructure": {
+        "introduction": true,
+        "minBodyParagraphs": 2,
+        "bodyParagraphRules": {
+          "oneMainIdea": true,
+          "minSupportingSentences": 2
+        },
+        "conclusion": true
+      }
+    },
+    {
+      "name": "Application",
+      "weight": 25,
+      "criteria": [
+        "Grammar",
+        "Capitalization",
+        "Punctuation",
+        "Spelling",
+        "Vocabulary use (age-appropriate)"
+      ]
+    }
+  ],
+
+  "trainingRules": {
+    "structureRequired": true,
+    "missingStructureScoreCap": 65,
+    "rewriteRequiredBelow": 70
+  },
+
+  "scoreMeaning": [
+    {
+      "range": "85-100",
+      "description": "Structure mastered and strong overall writing, as appropriate for the student's grade"
+    },
+    {
+      "range": "70-84",
+      "description": "Structure present but needs refinement, as appropriate for the student's grade"
+    },
+    {
+      "range": "60-69",
+      "description": "Structure incomplete; rewrite required, based on grade-level expectations"
+    },
+    {
+      "range": "0-59",
+      "description": "Major gaps in grade-level writing fundamentals"
+    }
+  ],
+
+  "gradingPrinciples": [
+    "All evaluations must be based on expectations appropriate for the student's grade level.",
+    "Do not apply higher-grade or adult writing standards.",
+    "Apply spelling, vocabulary, and language conventions according to the specified language variant."
+  ],
+
+  "topicProfile": {
+    "researchRequired": false,
+    "promptTone": "school_safe_neutral",
+    "readingLevel": "grade_5",
+
+    "supportedTaskTypes": [
+      "opinion_simple",
+      "informative_explanatory",
+      "narrative_personal"
+    ],
+
+    "mixRules": {
+      "nTopics": 10,
+      "targetDistribution": {
+        "opinion_simple": 4,
+        "informative_explanatory": 4,
+        "narrative_personal": 2
+      },
+      "avoidNearDuplicates": true
+    },
+
+    "softGuidelines": [
+      "Prefer concrete, everyday topics connected to student life (school, home, hobbies, friends).",
+      "Topics should be answerable without external research.",
+      "Keep prompts simple and specific (avoid abstract issues).",
+      "Avoid prompts that require strong counterarguments; focus on clear reasons and examples."
+    ],
+
+    "avoidTopics": [
+      "sexual orientation or gender identity",
+      "religion",
+      "race or ethnicity",
+      "political parties or elections",
+      "war or graphic violence",
+      "explicit sexual content",
+      "medical or mental health diagnoses"
+    ],
+
+    "outputFormat": {
+      "eachTopicIncludes": [
+        "taskType",
+        "topicTitle",
+        "prompt",
+        "structureHint"
+      ]
+    }
+  }
+}

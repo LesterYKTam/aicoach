@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id          String    @id @default(uuid())
+  deviceId    String
+  displayName String?
+  grade       Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  sessions    Session[]
+
+  @@index([deviceId])
+}
+
+model Session {
+  id          String       @id @default(uuid())
+  profileId   String
+  profile     Profile      @relation(fields: [profileId], references: [id])
+  topic       String?
+  status      String       @default("active")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[]
+
+  @@index([profileId, createdAt])
+}
+
+model Submission {
+  id         String   @id @default(uuid())
+  sessionId  String
+  session    Session  @relation(fields: [sessionId], references: [id])
+  essayText  String
+  evaluation Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([sessionId, createdAt])
+}
