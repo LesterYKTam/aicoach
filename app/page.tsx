@@ -437,13 +437,13 @@ export default function Home() {
               <div>
                 <h4 className="font-medium mb-2">Word Count</h4>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-2xl text-blue-600 font-bold">{targetWordCount}</span>
-                  <span className="text-sm text-muted-foreground">target (min: {minWordCount})</span>
+                  <span className={`text-2xl font-bold ${wordCount >= targetWordCount ? 'text-green-600' : 'text-blue-600'}`}>{wordCount}</span>
+                  <span className="text-sm text-muted-foreground">/ {targetWordCount} target</span>
                 </div>
                 <Progress value={Math.min(100, (wordCount / targetWordCount) * 100)} className="h-2" />
                 <div className="text-xs text-muted-foreground mt-1">
                   {wordCount < minWordCount
-                    ? `${minWordCount - wordCount} more words needed`
+                    ? `${minWordCount - wordCount} more words needed (min: ${minWordCount})`
                     : wordCount < targetWordCount
                     ? `${targetWordCount - wordCount} more to reach target`
                     : 'Great job reaching your goal!'}
