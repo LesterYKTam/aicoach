@@ -7,39 +7,83 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  profiles     Profile[]
+}
+
 model Profile {
   id          String    @id @default(uuid())
-  deviceId    String
+  deviceId    String?
   displayName String?
   grade       Int?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
   sessions    Session[]
 
   @@index([deviceId])
+  @@index([userId])
 }
 
 model Session {
   id          String       @id @default(uuid())
   profileId   String
-  profile     Profile      @relation(fields: [profileId], references: [id])
   topic       String?
   status      String       @default("active")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  profile     Profile      @relation(fields: [profileId], references: [id])
   submissions Submission[]
 
   @@index([profileId, createdAt])
 }
 
 model Submission {
-  id         String   @id @default(uuid())
-  sessionId  String
-  session    Session  @relation(fields: [sessionId], references: [id])
-  essayText  String
-  evaluation Json?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String @id @default(uuid())
+  sessionId String
+  essayText String
+
+  // Grading metadata
+  gradeLevel      Int?
+  rubricVersionId String?
+
+  // Scores
+  score              Int?
+  scoreKnowledge     Int?
+  scoreThinking      Int?
+  scoreCommunication Int?
+  scoreApplication   Int?
+
+  // Tags per category (1-3 each, stored as JSON string arrays)
+  tagsKnowledge      Json?
+  tagsThinking       Json?
+  tagsCommunication  Json?
+  tagsApplication    Json?
+
+  // Structure flags
+  hasIntroduction    Boolean?
+  bodyParagraphCount Int?
+  hasConclusion      Boolean?
+  structureComplete  Boolean?
+  requiresRewrite    Boolean?
+
+  // Feedback (JSON)
+  rubricComments Json?
+  strengths      Json?
+  nextSteps      Json?
+  coachTip       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  session   Session  @relation(fields: [sessionId], references: [id])
 
   @@index([sessionId, createdAt])
+  @@index([score])
+  @@index([rubricVersionId])
 }

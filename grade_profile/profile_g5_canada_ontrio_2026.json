@@ -1,4 +1,11 @@
 {
+  "version": {
+    "id": "ontario_2026_g5_v1",
+    "name": "Ontario Curriculum Grade 5",
+    "region": "canada_ontario",
+    "year": 2026,
+    "revision": 1
+  },
   "location1": "canada",
   "location2": "ontrio",
   "grade": 5,
@@ -90,6 +97,14 @@
     "All evaluations must be based on expectations appropriate for the student's grade level.",
     "Do not apply higher-grade or adult writing standards.",
     "Apply spelling, vocabulary, and language conventions according to the specified language variant."
+  ],
+
+  "redFlags": [
+    "missing_structure",
+    "too_short_for_grade",
+    "weak_supporting_details",
+    "limited_development",
+    "simple_sentence_structure"
   ],
 
   "topicProfile": {

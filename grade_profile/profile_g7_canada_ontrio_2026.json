@@ -1,4 +1,11 @@
 {
+  "version": {
+    "id": "ontario_2026_g7_v1",
+    "name": "Ontario Curriculum Grade 7",
+    "region": "canada_ontario",
+    "year": 2026,
+    "revision": 1
+  },
   "location1": "canada",
   "location2": "ontrio",
   "grade": 7,

@@ -5,16 +5,23 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
+    const userId = searchParams.get('userId');
 
-    if (!deviceId) {
+    // Must have either deviceId (guest) or userId (logged-in)
+    if (!deviceId && !userId) {
       return NextResponse.json(
-        { ok: false, error: 'deviceId query parameter is required' },
+        { ok: false, error: 'deviceId or userId query parameter is required' },
         { status: 400 }
       );
     }
 
+    // Build where clause - only filter by ONE identifier to prevent cross-user access
+    const where = userId
+      ? { userId }
+      : { deviceId, userId: null }; // Guest: must have deviceId AND no userId
+
     const profiles = await prisma.profile.findMany({
-      where: { deviceId },
+      where,
       orderBy: { createdAt: 'asc' },
     });
 

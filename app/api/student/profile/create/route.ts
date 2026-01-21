@@ -4,18 +4,20 @@ import { prisma } from '@/lib/db';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { deviceId, displayName, grade } = body;
+    const { deviceId, userId, displayName, grade } = body;
 
-    if (!deviceId) {
+    // Must have either deviceId (guest) or userId (logged-in)
+    if (!deviceId && !userId) {
       return NextResponse.json(
-        { ok: false, error: 'deviceId is required' },
+        { ok: false, error: 'deviceId or userId is required' },
         { status: 400 }
       );
     }
 
     const profile = await prisma.profile.create({
       data: {
-        deviceId,
+        deviceId: deviceId ?? null,
+        userId: userId ?? null,
         displayName: displayName ?? null,
         grade: grade ?? null,
       },

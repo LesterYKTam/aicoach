@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOpenAI } from '@/lib/openai';
+import { prisma } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -40,10 +41,20 @@ interface EvaluationTemplate {
   };
   feedbackFields: {
     strengths: { count: number; description: string };
-    areasToImprove: { count: number; description: string };
-    nextSteps: { count: number; description: string };
-    encouragement: { description: string };
-    coachTip: { description: string };
+    nextSteps: {
+      count: number;
+      description: string;
+      rankingRules?: {
+        instruction: string;
+        scoring: {
+          impact_score: string;
+          ease_score: string;
+          priority_score: string;
+        };
+        requirements: string[];
+      };
+    };
+    coachTip: { description: string; toneGuidelines?: string[] };
   };
   trainingModeRules: string[];
   structureTemplates: {
@@ -74,13 +85,19 @@ interface EvaluationTemplate {
       maxLength: number;
     };
     textFields: {
-      encouragement: { minLength: number; maxLength: number };
       coachTip: { minLength: number; maxLength: number };
     };
   };
 }
 
 interface Rubric {
+  version: {
+    id: string;
+    name: string;
+    region: string;
+    year: number;
+    revision: number;
+  };
   categories: Array<{
     name: string;
     weight: number;
@@ -203,32 +220,56 @@ function buildEvaluationSchema(rubric: Rubric, template: EvaluationTemplate) {
           maxItems: feedbackConfig.maxItems,
           items: { type: 'string', minLength: feedbackConfig.minLength, maxLength: feedbackConfig.maxLength },
         },
-        areasToImprove: {
-          type: 'array',
-          minItems: feedbackConfig.minItems,
-          maxItems: feedbackConfig.maxItems,
-          items: { type: 'string', minLength: feedbackConfig.minLength, maxLength: feedbackConfig.maxLength },
-        },
         nextSteps: {
           type: 'array',
           minItems: feedbackConfig.minItems,
           maxItems: feedbackConfig.maxItems,
           items: { type: 'string', minLength: feedbackConfig.minLength, maxLength: feedbackConfig.maxLength },
         },
-        encouragement: { type: 'string', minLength: textConfig.encouragement.minLength, maxLength: textConfig.encouragement.maxLength },
         coachTip: { type: 'string', minLength: textConfig.coachTip.minLength, maxLength: textConfig.coachTip.maxLength },
         requiresRewrite: { type: 'boolean' },
+        rubricTags: {
+          type: 'object',
+          additionalProperties: false,
+          description: 'Short keyword tags (1-3 per category) identifying key strengths or areas to improve',
+          properties: {
+            knowledgeUnderstanding: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 3,
+              items: { type: 'string', minLength: 3, maxLength: 30 },
+            },
+            thinking: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 3,
+              items: { type: 'string', minLength: 3, maxLength: 30 },
+            },
+            communicationStructure: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 3,
+              items: { type: 'string', minLength: 3, maxLength: 30 },
+            },
+            application: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 3,
+              items: { type: 'string', minLength: 3, maxLength: 30 },
+            },
+          },
+          required: ['knowledgeUnderstanding', 'thinking', 'communicationStructure', 'application'],
+        },
       },
       required: [
         'ok',
         'score',
         'rubric',
         'rubricComments',
+        'rubricTags',
         'structureAnalysis',
         'strengths',
-        'areasToImprove',
         'nextSteps',
-        'encouragement',
         'coachTip',
         'requiresRewrite',
       ],
@@ -290,12 +331,23 @@ ${reqStruct.counterpointRequired ? `- ${st.counterpointRequired}` : ''}
 
   // Build feedback style section
   const ff = template.feedbackFields;
+  const rankingRules = ff.nextSteps.rankingRules;
+  let nextStepsRules = `- nextSteps (Level Up Tips): ${ff.nextSteps.count} ${ff.nextSteps.description}`;
+  if (rankingRules) {
+    nextStepsRules += `
+    ${rankingRules.instruction}
+    Scoring: impact_score (${rankingRules.scoring.impact_score}), ease_score (${rankingRules.scoring.ease_score})
+    Formula: ${rankingRules.scoring.priority_score}
+    ${rankingRules.requirements.map(r => `- ${r}`).join('\n    ')}`;
+  }
+  let coachTipRules = `- coachTip (Coach Says): ${ff.coachTip.description}`;
+  if (ff.coachTip.toneGuidelines) {
+    coachTipRules += `\n    ${ff.coachTip.toneGuidelines.map(g => `- ${g}`).join('\n    ')}`;
+  }
   const feedbackStyle = [
     `- strengths: ${ff.strengths.count} ${ff.strengths.description}`,
-    `- areasToImprove: ${ff.areasToImprove.count} ${ff.areasToImprove.description}`,
-    `- nextSteps: ${ff.nextSteps.count} ${ff.nextSteps.description}`,
-    `- encouragement: ${ff.encouragement.description}`,
-    `- coachTip: ${ff.coachTip.description}`,
+    nextStepsRules,
+    coachTipRules,
   ].join('\n');
 
   // Build training mode rules
@@ -324,6 +376,11 @@ ${commentExamples}
 
 FEEDBACK STYLE:
 ${feedbackStyle}
+
+RUBRIC TAGS:
+For each rubric category, provide 1-3 short keyword tags (3-30 chars each) that identify key characteristics of the student's writing in that area.
+Tags should be lowercase with hyphens, e.g., "clear-thesis", "weak-transitions", "good-examples", "needs-evidence", "strong-vocabulary".
+Tags can be positive (strengths) or negative (areas to improve).
 
 TRAINING MODE:
 ${trainingRules}${counterpointFeedbackRule}
@@ -419,6 +476,44 @@ export async function POST(request: NextRequest) {
       communicationStructure: rubric.categories.find((c: Category) => c.name === 'Communication & Structure')?.weight ?? 35,
       application: rubric.categories.find((c: Category) => c.name === 'Application')?.weight ?? 25,
     };
+
+    // Include rubric version in response
+    parsed.rubricVersionId = rubric.version?.id || 'unknown';
+
+    // Save evaluation to database if submissionId is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(submissionId)) {
+      try {
+        await prisma.submission.update({
+          where: { id: submissionId },
+          data: {
+            gradeLevel: grade,
+            rubricVersionId: parsed.rubricVersionId,
+            score: parsed.score,
+            scoreKnowledge: r.knowledgeUnderstanding,
+            scoreThinking: r.thinking,
+            scoreCommunication: r.communicationStructure,
+            scoreApplication: r.application,
+            tagsKnowledge: parsed.rubricTags?.knowledgeUnderstanding || [],
+            tagsThinking: parsed.rubricTags?.thinking || [],
+            tagsCommunication: parsed.rubricTags?.communicationStructure || [],
+            tagsApplication: parsed.rubricTags?.application || [],
+            hasIntroduction: parsed.structureAnalysis?.hasIntroduction,
+            bodyParagraphCount: parsed.structureAnalysis?.bodyParagraphCount,
+            hasConclusion: parsed.structureAnalysis?.hasConclusion,
+            structureComplete: parsed.structureAnalysis?.structureComplete,
+            requiresRewrite: parsed.requiresRewrite,
+            rubricComments: parsed.rubricComments,
+            strengths: parsed.strengths,
+            nextSteps: parsed.nextSteps,
+            coachTip: parsed.coachTip,
+          },
+        });
+      } catch (dbErr) {
+        console.error('Failed to save evaluation to database:', dbErr);
+        // Continue - don't fail the request if DB save fails
+      }
+    }
 
     return NextResponse.json(parsed);
   } catch (err) {

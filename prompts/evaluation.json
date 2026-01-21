@@ -34,19 +34,32 @@
       "count": 3,
       "description": "things they did well (be specific and encouraging)"
     },
-    "areasToImprove": {
-      "count": 3,
-      "description": "things to work on (gentle, not harsh)"
-    },
     "nextSteps": {
       "count": 3,
-      "description": "simple actions they can take right now"
-    },
-    "encouragement": {
-      "description": "A warm, motivating message about their progress"
+      "description": "Level Up Tips - simple actions they can take right now",
+      "rankingRules": {
+        "instruction": "Internally rank tips by priority_score DESC, but do NOT output the scores - only output the tip text",
+        "scoring": {
+          "impact_score": "1-5: how much it improves the essay quality and score",
+          "ease_score": "1-5: how easy it is for the student to do quickly",
+          "priority_score": "impact_score * 2 + ease_score"
+        },
+        "requirements": [
+          "Tips must be specific and actionable",
+          "Tips must not be repetitive",
+          "Output only the tip text, NOT the scores"
+        ]
+      }
     },
     "coachTip": {
-      "description": "One practical writing tip they can use next time"
+      "description": "One practical writing tip they can use next time",
+      "toneGuidelines": [
+        "Always use a positive, supportive coaching tone",
+        "Positivity means showing belief and encouragement, not pretending the writing is perfect",
+        "Be honest about weaknesses, but frame them as next steps and growth opportunities",
+        "Avoid fake praise like 'amazing' for low-scoring work",
+        "End with a short message that shows faith in the student (e.g., 'You can do this—one small change will make it stronger.')"
+      ]
     }
   },
 
@@ -103,10 +116,6 @@
       "maxLength": 120
     },
     "textFields": {
-      "encouragement": {
-        "minLength": 20,
-        "maxLength": 300
-      },
       "coachTip": {
         "minLength": 20,
         "maxLength": 300

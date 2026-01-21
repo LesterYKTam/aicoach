@@ -7,8 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { Sparkles, BookOpen, Lightbulb, CheckCircle2, AlertCircle, ArrowRight, Star, PenLine, MessageCircle } from 'lucide-react';
+import { Sparkles, BookOpen, Lightbulb, CheckCircle2, AlertCircle, ArrowRight, Star, PenLine, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AuthHeader } from '@/components/ui/auth-header';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useWritingSession } from '@/lib/hooks/use-writing-session';
 
 type TopicResponse = {
   ok: true;
@@ -27,10 +29,26 @@ type UiTopic = {
   paragraphStructure?: Array<{ paragraph: string; guidance: string }>;
 };
 
-type WritingTips = {
-  wordCount: number;
-  paragraphStructure: Array<{ paragraph: string; guidance: string }>;
-  quickTips: string[];
+type WritingRequirements = {
+  wordCount: { min: number; target: number };
+  structure: {
+    paragraphs: Array<{ name: string; required: boolean; description: string }>;
+    minBodyParagraphs: number;
+    counterpointRequired: boolean;
+  };
+};
+
+type TipsResponse = {
+  ok: boolean;
+  requirements: WritingRequirements;
+};
+
+type CoachHelpResponse = {
+  ok: boolean;
+  status: 'not_started' | 'in_progress' | 'almost_done' | 'complete';
+  encouragement: string;
+  nextStep: string;
+  question: string;
 };
 
 type EvaluationResponse = {
@@ -62,9 +80,7 @@ type EvaluationResponse = {
     hasCounterpoint?: boolean;
   };
   strengths: string[];
-  areasToImprove: string[];
   nextSteps: string[];
-  encouragement: string;
   coachTip: string;
   requiresRewrite: boolean;
 };
@@ -114,37 +130,40 @@ const StarRating = ({ score, maxScore }: { score: number; maxScore: number }) =>
 };
 
 export default function Home() {
+  // Writing session hook for profile/session/submission management
+  const { submitAndEvaluate, isLoading: isSessionLoading } = useWritingSession();
+
   const [selectedGrade, setSelectedGrade] = useState<string>('5');
   const [topicMode, setTopicMode] = useState<'generate' | 'custom'>('generate');
   const [customTopic, setCustomTopic] = useState('');
   const [currentTopic, setCurrentTopic] = useState<UiTopic | null>(null);
-  const [writingTips, setWritingTips] = useState<WritingTips | null>(null);
+  const [requirements, setRequirements] = useState<WritingRequirements | null>(null);
   const [isLoadingTips, setIsLoadingTips] = useState(false);
+  const [coachHelp, setCoachHelp] = useState<CoachHelpResponse | null>(null);
+  const [isLoadingCoachHelp, setIsLoadingCoachHelp] = useState(false);
   const [essay, setEssay] = useState(
     'School uniforms should be required because they help students focus. When everyone wears the same clothes, students do not worry about brands or fashion. This can reduce bullying and make school feel fair. First, uniforms save time in the morning. Students do not spend too long choosing outfits. If they are ready faster, they arrive at school less stressed and can start learning right away. Second, uniforms can make students feel like they belong. When a class looks similar, it feels like a team. Students may take school rules more seriously and behave better. In conclusion, school uniforms are helpful because they reduce distractions, save time, and build a sense of community. Schools should consider using uniforms to improve learning.'
   );
   const [evaluation, setEvaluation] = useState<EvaluationResponse | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [showMoreTips, setShowMoreTips] = useState(false);
 
   const wordCount = essay.trim() ? essay.trim().split(/\s+/).length : 0;
 
-  // Get tips from generated topic or fetched tips
-  const activeTips = currentTopic?.paragraphStructure && currentTopic?.wordCount
-    ? { wordCount: currentTopic.wordCount, paragraphStructure: currentTopic.paragraphStructure, quickTips: writingTips?.quickTips || [] }
-    : writingTips;
-  const targetWordCount = activeTips?.wordCount ?? (parseInt(selectedGrade) <= 4 ? 150 : parseInt(selectedGrade) <= 8 ? 300 : 500);
+  // Get word count target from requirements or use defaults
+  const targetWordCount = requirements?.wordCount.target ?? (parseInt(selectedGrade) <= 4 ? 150 : parseInt(selectedGrade) <= 8 ? 300 : 500);
+  const minWordCount = requirements?.wordCount.min ?? Math.floor(targetWordCount * 0.8);
 
   // Fetch tips when grade changes (for custom topics) or on initial load
-  const fetchTips = useCallback(async (grade: number, topic?: string) => {
+  const fetchTips = useCallback(async (grade: number) => {
     setIsLoadingTips(true);
     try {
       const params = new URLSearchParams({ grade: grade.toString() });
-      if (topic) params.append('topic', topic);
       const res = await fetch(`/api/tips?${params}`);
-      const data = await res.json();
+      const data: TipsResponse = await res.json();
       if (data.ok) {
-        setWritingTips(data);
+        setRequirements(data.requirements);
       }
     } catch (err) {
       console.error('Failed to fetch tips:', err);
@@ -153,18 +172,41 @@ export default function Home() {
     }
   }, []);
 
+  // Get personalized coach help based on current writing
+  const handleCoachHelp = async () => {
+    setIsLoadingCoachHelp(true);
+    try {
+      const grade = parseInt(selectedGrade, 10);
+      const topic = currentTopic?.title || customTopic || undefined;
+      const res = await fetch('/api/coach-help', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grade, topic, essayText: essay }),
+      });
+      const data: CoachHelpResponse = await res.json();
+      if (data.ok) {
+        setCoachHelp(data);
+      }
+    } catch (err) {
+      console.error('Failed to get coach help:', err);
+    } finally {
+      setIsLoadingCoachHelp(false);
+    }
+  };
+
   // Fetch tips on grade change
   useEffect(() => {
     const grade = parseInt(selectedGrade, 10);
-    if (topicMode === 'custom' || !currentTopic) {
-      fetchTips(grade, topicMode === 'custom' ? customTopic : undefined);
-    }
-  }, [selectedGrade, topicMode, fetchTips, currentTopic, customTopic]);
+    fetchTips(grade);
+    // Clear coach help when grade changes
+    setCoachHelp(null);
+  }, [selectedGrade, fetchTips]);
 
   const handleGenerateTopic = async () => {
     try {
       setIsGenerating(true);
       setEvaluation(null);
+      setCoachHelp(null);
 
       const grade = parseInt(selectedGrade, 10);
       const out = await postJson<TopicResponse>('/api/topic/generate', { grade });
@@ -176,9 +218,6 @@ export default function Home() {
         wordCount: out.wordCount,
         paragraphStructure: out.paragraphStructure,
       });
-
-      // Fetch tips for this topic (to get quickTips)
-      fetchTips(grade, out.title);
 
       // Clear the essay box so the student starts fresh
       setEssay('');
@@ -196,13 +235,17 @@ export default function Home() {
       setIsEvaluating(true);
 
       const grade = parseInt(selectedGrade, 10);
-      const out = await postJson<EvaluationResponse>('/api/submission/evaluate', {
-        grade,
-        essayText: essay,
-        submissionId: 'ui-test',
-      });
+      const topic = currentTopic?.title || customTopic || undefined;
 
-      setEvaluation(out);
+      // Use the writing session hook to create submission and evaluate
+      const { evaluation: evalResult } = await submitAndEvaluate(essay, grade, topic);
+
+      if (evalResult && (evalResult as EvaluationResponse).ok) {
+        setEvaluation(evalResult as EvaluationResponse);
+        setShowMoreTips(false);
+      } else {
+        throw new Error('Evaluation failed');
+      }
     } catch (err) {
       console.error('Evaluate failed:', err);
       alert(`Evaluate failed: ${err instanceof Error ? err.message : err}`);
@@ -215,14 +258,19 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-3 rounded-2xl">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-4xl font-bold">My Writing Coach</h1>
+        <div className="mb-12">
+          <div className="flex justify-end mb-4">
+            <AuthHeader />
           </div>
-          <p className="text-lg text-muted-foreground">Let&apos;s write together</p>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-3 rounded-2xl">
+                <BookOpen className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-4xl font-bold">My Writing Coach</h1>
+            </div>
+            <p className="text-lg text-muted-foreground">Let&apos;s write together</p>
+          </div>
         </div>
 
         {/* Section 1: Topic Selection */}
@@ -359,106 +407,142 @@ export default function Home() {
               </span>
               <Button
                 onClick={handleEvaluate}
-                disabled={!essay.trim() || isEvaluating}
+                disabled={!essay.trim() || isEvaluating || isSessionLoading}
                 size="lg"
                 className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
-                {isEvaluating ? 'Evaluating...' : 'Evaluate Essay'}
+                {isSessionLoading ? 'Loading...' : isEvaluating ? 'Evaluating...' : 'Evaluate Essay'}
               </Button>
             </div>
           </Card>
 
-          {/* Right: Writing Tips */}
+          {/* Right: Writing Requirements & Tips */}
           <Card className="p-6 bg-white/80 backdrop-blur shadow-lg border-2">
             <div className="flex items-center gap-2 mb-4">
               <Lightbulb className="w-5 h-5 text-yellow-600" />
-              <h3 className="text-lg font-semibold">Writing Tips</h3>
+              <h3 className="text-lg font-semibold">Requirements</h3>
               {isLoadingTips && <span className="text-xs text-muted-foreground">(loading...)</span>}
             </div>
 
             <div className="space-y-6">
+              {/* Word Count Requirement */}
               <div>
-                <h4 className="font-medium mb-2">Target Word Count</h4>
-                <div className="text-2xl text-blue-600 font-bold mb-2">{targetWordCount} words</div>
+                <h4 className="font-medium mb-2">Word Count</h4>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-2xl text-blue-600 font-bold">{targetWordCount}</span>
+                  <span className="text-sm text-muted-foreground">target (min: {minWordCount})</span>
+                </div>
                 <Progress value={Math.min(100, (wordCount / targetWordCount) * 100)} className="h-2" />
                 <div className="text-xs text-muted-foreground mt-1">
-                  {wordCount < targetWordCount
-                    ? `${targetWordCount - wordCount} more words to go!`
+                  {wordCount < minWordCount
+                    ? `${minWordCount - wordCount} more words needed`
+                    : wordCount < targetWordCount
+                    ? `${targetWordCount - wordCount} more to reach target`
                     : 'Great job reaching your goal!'}
                 </div>
               </div>
 
+              {/* Structure Requirements */}
               <div>
                 <h4 className="font-medium mb-3">Essay Structure</h4>
-                <div className="space-y-3">
-                  {activeTips?.paragraphStructure ? (
-                    activeTips.paragraphStructure.map((para, idx) => {
+                <div className="space-y-2">
+                  {requirements?.structure.paragraphs ? (
+                    requirements.structure.paragraphs.map((para, idx) => {
                       const colors = [
                         { bg: 'bg-blue-100', text: 'text-blue-700' },
                         { bg: 'bg-purple-100', text: 'text-purple-700' },
                         { bg: 'bg-purple-100', text: 'text-purple-700' },
+                        { bg: 'bg-purple-100', text: 'text-purple-700' },
                         { bg: 'bg-green-100', text: 'text-green-700' },
                       ];
-                      const color = colors[idx] || colors[0];
+                      const color = colors[Math.min(idx, colors.length - 1)];
                       return (
                         <div key={idx} className="flex items-start gap-2">
                           <div className={`w-6 h-6 rounded-full ${color.bg} ${color.text} flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-medium`}>
                             {idx + 1}
                           </div>
                           <div>
-                            <div className="text-sm font-medium">{para.paragraph}</div>
-                            <div className="text-xs text-muted-foreground">{para.guidance}</div>
+                            <div className="text-sm font-medium">{para.name}</div>
+                            <div className="text-xs text-muted-foreground">{para.description}</div>
                           </div>
                         </div>
                       );
                     })
                   ) : (
-                    <>
-                      <div className="flex items-start gap-2">
-                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-medium">1</div>
-                        <div>
-                          <div className="text-sm font-medium">Introduction</div>
-                          <div className="text-xs text-muted-foreground">Hook + thesis</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-medium">2</div>
-                        <div>
-                          <div className="text-sm font-medium">Body 1</div>
-                          <div className="text-xs text-muted-foreground">First main point</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-medium">3</div>
-                        <div>
-                          <div className="text-sm font-medium">Body 2</div>
-                          <div className="text-xs text-muted-foreground">Second main point</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0 mt-0.5 text-sm font-medium">4</div>
-                        <div>
-                          <div className="text-sm font-medium">Conclusion</div>
-                          <div className="text-xs text-muted-foreground">Wrap up + final thought</div>
-                        </div>
-                      </div>
-                    </>
+                    <div className="text-xs text-muted-foreground">Loading structure...</div>
                   )}
                 </div>
+                {requirements?.structure.counterpointRequired && (
+                  <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+                    <AlertCircle className="w-3 h-3 inline mr-1" />
+                    Counterpoint required: Address an opposing view
+                  </div>
+                )}
               </div>
 
-              {/* Quick Tips */}
-              {activeTips?.quickTips && activeTips.quickTips.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">Quick Tips</h4>
-                  <ul className="space-y-2">
-                    {activeTips.quickTips.map((tip, idx) => (
-                      <li key={idx} className="text-xs text-muted-foreground flex items-start gap-1">
-                        <Star className="w-3 h-3 text-yellow-500 mt-0.5 flex-shrink-0" />
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
+              {/* Coach Help Button */}
+              <div className="border-t pt-4">
+                <Button
+                  onClick={handleCoachHelp}
+                  disabled={isLoadingCoachHelp}
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2 text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {isLoadingCoachHelp ? 'Thinking...' : 'Ask Coach for Help'}
+                </Button>
+              </div>
+
+              {/* Coach Help Response */}
+              {coachHelp && (
+                <div className="space-y-3 pt-4 border-t">
+                  {/* Status Badge */}
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className={
+                        coachHelp.status === 'complete'
+                          ? 'bg-green-100 text-green-700'
+                          : coachHelp.status === 'almost_done'
+                          ? 'bg-blue-100 text-blue-700'
+                          : coachHelp.status === 'in_progress'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }
+                    >
+                      {coachHelp.status === 'complete'
+                        ? 'Looking good!'
+                        : coachHelp.status === 'almost_done'
+                        ? 'Almost there!'
+                        : coachHelp.status === 'in_progress'
+                        ? 'Keep going!'
+                        : 'Just starting'}
+                    </Badge>
+                  </div>
+
+                  {/* Encouragement */}
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-green-700">{coachHelp.encouragement}</p>
+                    </div>
+                  </div>
+
+                  {/* Next Step */}
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <ArrowRight className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-blue-700">{coachHelp.nextStep}</p>
+                    </div>
+                  </div>
+
+                  {/* Question */}
+                  <div className="bg-purple-50 p-3 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <Lightbulb className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-purple-700 italic">{coachHelp.question}</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -631,7 +715,7 @@ export default function Home() {
             </div>
 
             {/* Feedback Columns */}
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
               <Card className="p-5 bg-green-50 border-green-200">
                 <div className="flex items-center gap-2 mb-3">
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -647,49 +731,49 @@ export default function Home() {
                 </ul>
               </Card>
 
-              <Card className="p-5 bg-orange-50 border-orange-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                  <h3 className="font-semibold">Things to Work On</h3>
-                </div>
-                <ul className="space-y-2">
-                  {evaluation.areasToImprove.map((improvement, idx) => (
-                    <li key={idx} className="text-sm flex items-start gap-2">
-                      <span className="text-orange-600 mt-1">•</span>
-                      <span>{improvement}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-
               <Card className="p-5 bg-blue-50 border-blue-200">
                 <div className="flex items-center gap-2 mb-3">
-                  <ArrowRight className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-semibold">Try This Next</h3>
+                  <Lightbulb className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold">Level Up Tip</h3>
                 </div>
                 <ul className="space-y-2">
-                  {evaluation.nextSteps.map((step, idx) => (
+                  <li className="text-sm flex items-start gap-2">
+                    <span className="text-blue-600 mt-1">•</span>
+                    <span>{evaluation.nextSteps[0]}</span>
+                  </li>
+                  {showMoreTips && evaluation.nextSteps.slice(1).map((step, idx) => (
                     <li key={idx} className="text-sm flex items-start gap-2">
                       <span className="text-blue-600 mt-1">•</span>
                       <span>{step}</span>
                     </li>
                   ))}
                 </ul>
+                {evaluation.nextSteps.length > 1 && (
+                  <button
+                    onClick={() => setShowMoreTips(!showMoreTips)}
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    {showMoreTips ? (
+                      <>
+                        <ChevronUp className="w-4 h-4" />
+                        Hide tips
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4" />
+                        More tips
+                      </>
+                    )}
+                  </button>
+                )}
               </Card>
             </div>
 
-            {/* Encouragement & Tips */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="p-5 bg-purple-50 border-purple-200">
-                <h3 className="font-semibold mb-3">You Got This!</h3>
-                <p className="text-sm text-foreground/80">{evaluation.encouragement}</p>
-              </Card>
-
-              <Card className="p-5 bg-indigo-50 border-indigo-200">
-                <h3 className="font-semibold mb-3">Coach&apos;s Tip</h3>
-                <p className="text-sm text-foreground/80">{evaluation.coachTip}</p>
-              </Card>
-            </div>
+            {/* Coach Says */}
+            <Card className="p-5 bg-indigo-50 border-indigo-200">
+              <h3 className="font-semibold mb-3">Coach Says</h3>
+              <p className="text-sm text-foreground/80">{evaluation.coachTip}</p>
+            </Card>
           </Card>
         )}
       </div>
