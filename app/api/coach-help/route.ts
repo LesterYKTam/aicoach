@@ -14,21 +14,21 @@ const coachHelpSchema = {
       },
       encouragement: {
         type: 'string',
-        minLength: 20,
-        maxLength: 250,
-        description: 'A short, encouraging message about what they have done well',
+        minLength: 10,
+        maxLength: 200,
+        description: 'A short encouraging message (max 30 words)',
       },
       nextStep: {
         type: 'string',
-        minLength: 20,
-        maxLength: 350,
-        description: 'One specific, actionable suggestion for what to do next',
+        minLength: 10,
+        maxLength: 200,
+        description: 'One specific actionable suggestion (max 30 words)',
       },
       question: {
         type: 'string',
         minLength: 10,
-        maxLength: 200,
-        description: 'A thought-provoking question to help them think about their writing',
+        maxLength: 150,
+        description: 'A thought-provoking question (max 30 words)',
       },
     },
     required: ['status', 'encouragement', 'nextStep', 'question'],
@@ -93,8 +93,11 @@ Give them helpful, personalized feedback:
 
 4. question: Ask ONE thought-provoking question to help them think deeper about their topic.
 
-Keep your language simple and encouraging - this is a ${grade}th grader!
-Do NOT overwhelm them with multiple suggestions. ONE encouragement, ONE next step, ONE question.
+IMPORTANT RULES:
+- Keep your language simple and encouraging - this is a ${grade}th grader!
+- Each response (encouragement, nextStep, question) must be NO MORE THAN 30 WORDS.
+- Write complete sentences, but be concise.
+- Do NOT overwhelm them with multiple suggestions. ONE encouragement, ONE next step, ONE question.
 `.trim(),
       text: {
         format: {
