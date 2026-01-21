@@ -15,19 +15,19 @@ const coachHelpSchema = {
       encouragement: {
         type: 'string',
         minLength: 20,
-        maxLength: 100,
+        maxLength: 250,
         description: 'A short, encouraging message about what they have done well',
       },
       nextStep: {
         type: 'string',
         minLength: 20,
-        maxLength: 150,
+        maxLength: 350,
         description: 'One specific, actionable suggestion for what to do next',
       },
       question: {
         type: 'string',
         minLength: 10,
-        maxLength: 100,
+        maxLength: 200,
         description: 'A thought-provoking question to help them think about their writing',
       },
     },
