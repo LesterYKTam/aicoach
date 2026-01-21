@@ -406,9 +406,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!Number.isFinite(grade) || grade < 1 || grade > 12) {
+    if (!Number.isFinite(grade) || grade < 3 || grade > 8) {
       return NextResponse.json(
-        { ok: false, error: 'grade must be 1-12' },
+        { ok: false, error: 'grade must be 3-8' },
         { status: 400 }
       );
     }

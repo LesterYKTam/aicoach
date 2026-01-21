@@ -1,0 +1,165 @@
+{
+  "version": {
+    "id": "ontario_2026_g8_v1",
+    "name": "Ontario Curriculum Grade 8",
+    "region": "canada_ontario",
+    "year": 2026,
+    "revision": 1
+  },
+  "location1": "canada",
+  "location2": "ontario",
+  "grade": 8,
+  "mode": "training",
+  "language": "en-CA",
+  "totalScore": 100,
+
+  "categories": [
+    {
+      "name": "Knowledge & Understanding",
+      "weight": 25,
+      "criteria": [
+        "Clear and focused topic or thesis",
+        "Strong understanding of the task and purpose",
+        "Writing consistently stays on topic"
+      ]
+    },
+    {
+      "name": "Thinking",
+      "weight": 30,
+      "criteria": [
+        "Logical and effective organization of ideas",
+        "Development of ideas using reasons, explanations, and relevant examples",
+        "Awareness of different perspectives"
+      ]
+    },
+    {
+      "name": "Communication & Structure",
+      "weight": 30,
+      "criteria": [
+        "Clarity, flow, and coherence of ideas",
+        "Effective paragraph structure",
+        "Clear introduction with a thesis or position",
+        "At least three body paragraphs",
+        "One main idea per body paragraph",
+        "Supporting details with explanation and examples",
+        "Inclusion of a counterpoint or alternate perspective",
+        "Clear conclusion that reinforces the thesis",
+        "Effective and varied transitions"
+      ],
+      "requiredStructure": {
+        "introduction": true,
+        "minBodyParagraphs": 3,
+        "bodyParagraphRules": {
+          "oneMainIdea": true,
+          "minSupportingSentences": 3
+        },
+        "conclusion": true,
+        "counterpointRequired": true
+      }
+    },
+    {
+      "name": "Application",
+      "weight": 15,
+      "criteria": [
+        "Sentence variety and fluency",
+        "Grammar (consistent tense, agreement, complex sentences)",
+        "Punctuation (commas, quotation marks, apostrophes)",
+        "Spelling (grade-appropriate and subject-specific words)",
+        "Vocabulary use (precise and varied)"
+      ]
+    }
+  ],
+
+  "trainingRules": {
+    "structureRequired": true,
+    "missingStructureScoreCap": 65,
+    "rewriteRequiredBelow": 65,
+    "counterpointMissingPenalty": {
+      "enabled": true,
+      "deductPoints": 10,
+      "note": "If the essay does not include an opposing viewpoint/counterpoint, subtract points even if structure is otherwise complete."
+    }
+  },
+
+  "scoreMeaning": [
+    {
+      "range": "85-100",
+      "description": "Well-organized and developed writing with clear reasoning and structure, meeting Grade 8 expectations"
+    },
+    {
+      "range": "70-84",
+      "description": "Clear structure and ideas with some weaknesses, appropriate for Grade 8"
+    },
+    {
+      "range": "60-69",
+      "description": "Structure present but underdeveloped or uneven; revision required at Grade 8 level"
+    },
+    {
+      "range": "0-59",
+      "description": "Major gaps in Grade 8 writing skills and organization"
+    }
+  ],
+
+  "gradingPrinciples": [
+    "Evaluate writing based on Grade 8 curriculum expectations only.",
+    "Do not apply secondary school (Grade 9+) writing standards.",
+    "Emphasize reasoning, organization, and clarity over length.",
+    "Apply spelling and language conventions according to the specified language variant."
+  ],
+
+  "redFlags": [
+    "missing_structure",
+    "missing_counterpoint",
+    "weak_thesis",
+    "insufficient_development",
+    "repetitive_or_weak_transitions"
+  ],
+
+  "topicProfile": {
+    "researchRequired": false,
+    "promptTone": "school_safe_neutral",
+    "readingLevel": "grade_8",
+
+    "supportedTaskTypes": [
+      "opinion_argumentative",
+      "informative_explanatory",
+      "narrative_personal"
+    ],
+
+    "mixRules": {
+      "nTopics": 10,
+      "targetDistribution": {
+        "opinion_argumentative": 5,
+        "informative_explanatory": 3,
+        "narrative_personal": 2
+      },
+      "avoidNearDuplicates": true
+    },
+
+    "softGuidelines": [
+      "Use topics that encourage critical thinking and discussion.",
+      "Prompts should be answerable without formal research.",
+      "Encourage clear arguments supported by reasons and examples.",
+      "Allow exploration of different viewpoints while maintaining a clear position."
+    ],
+
+    "avoidTopics": [
+      "sexual orientation or gender identity",
+      "religion",
+      "race or ethnicity",
+      "political parties or elections",
+      "war or graphic violence",
+      "explicit sexual content",
+      "medical or mental health diagnoses"
+    ],
+
+    "outputFormat": {
+      "eachTopicIncludes": [
+        "taskType",
+        "topicTitle",
+        "prompt",
+        "structureHint"
+      ]
+    }
+  }
+}

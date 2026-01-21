@@ -1,0 +1,152 @@
+{
+  "version": {
+    "id": "ontario_2026_g3_v1",
+    "name": "Ontario Curriculum Grade 3",
+    "region": "canada_ontario",
+    "year": 2026,
+    "revision": 1
+  },
+  "location1": "canada",
+  "location2": "ontario",
+  "grade": 3,
+  "mode": "training",
+  "language": "en-CA",
+  "totalScore": 100,
+
+  "categories": [
+    {
+      "name": "Knowledge & Understanding",
+      "weight": 20,
+      "criteria": [
+        "Topic clarity (simple, clear main idea)",
+        "Understanding of the task",
+        "Writing stays mostly on topic"
+      ]
+    },
+    {
+      "name": "Thinking",
+      "weight": 15,
+      "criteria": [
+        "Basic organization of ideas",
+        "Simple development using reasons or details"
+      ]
+    },
+    {
+      "name": "Communication & Structure",
+      "weight": 40,
+      "criteria": [
+        "Clarity of ideas",
+        "Simple paragraph structure",
+        "Effective introduction (tells what the writing is about)",
+        "At least one body paragraph",
+        "One main idea in the body paragraph",
+        "At least one supporting detail sentence",
+        "Clear conclusion (wraps up the main idea)",
+        "Simple transitions (e.g., first/next/also/finally)"
+      ],
+      "requiredStructure": {
+        "introduction": true,
+        "minBodyParagraphs": 1,
+        "bodyParagraphRules": {
+          "oneMainIdea": true,
+          "minSupportingSentences": 1
+        },
+        "conclusion": true
+      }
+    },
+    {
+      "name": "Application",
+      "weight": 25,
+      "criteria": [
+        "Basic sentence control (avoid fragments/run-ons when possible)",
+        "Capitalization (sentence starts, names)",
+        "Punctuation (periods, question marks, commas in simple lists)",
+        "Spelling (high-frequency and familiar words)",
+        "Vocabulary use (simple and age-appropriate)"
+      ]
+    }
+  ],
+
+  "trainingRules": {
+    "structureRequired": true,
+    "missingStructureScoreCap": 65,
+    "rewriteRequiredBelow": 65
+  },
+
+  "scoreMeaning": [
+    {
+      "range": "85-100",
+      "description": "Clear structure and strong overall writing, as appropriate for the student's grade"
+    },
+    {
+      "range": "70-84",
+      "description": "Structure present but needs improvement, as appropriate for the student's grade"
+    },
+    {
+      "range": "60-69",
+      "description": "Structure incomplete or unclear; revision required, based on grade-level expectations"
+    },
+    {
+      "range": "0-59",
+      "description": "Major gaps in grade-level writing fundamentals"
+    }
+  ],
+
+  "gradingPrinciples": [
+    "Evaluate writing based on Grade 3 expectations only.",
+    "Do not apply Grade 4+ standards (length, sophistication, or advanced reasoning).",
+    "Prioritize structure and clarity over complexity.",
+    "Apply spelling and language conventions according to the specified language variant."
+  ],
+
+  "redFlags": [
+    "missing_structure",
+    "too_short_for_grade",
+    "unclear_main_idea",
+    "weak_supporting_details",
+    "run_on_sentences"
+  ],
+
+  "topicProfile": {
+    "researchRequired": false,
+    "promptTone": "school_safe_neutral",
+    "readingLevel": "grade_3",
+    "supportedTaskTypes": [
+      "opinion_simple",
+      "informative_explanatory",
+      "narrative_personal"
+    ],
+    "mixRules": {
+      "nTopics": 10,
+      "targetDistribution": {
+        "opinion_simple": 3,
+        "informative_explanatory": 3,
+        "narrative_personal": 4
+      },
+      "avoidNearDuplicates": true
+    },
+    "softGuidelines": [
+      "Use familiar, concrete topics (school, home, friends, hobbies, nature).",
+      "Prompts must be answerable without research.",
+      "Keep prompts short and very clear.",
+      "Encourage 1–2 simple reasons or a few clear details (no counterarguments)."
+    ],
+    "avoidTopics": [
+      "sexual orientation or gender identity",
+      "religion",
+      "race or ethnicity",
+      "political parties or elections",
+      "war or graphic violence",
+      "explicit sexual content",
+      "medical or mental health diagnoses"
+    ],
+    "outputFormat": {
+      "eachTopicIncludes": [
+        "taskType",
+        "topicTitle",
+        "prompt",
+        "structureHint"
+      ]
+    }
+  }
+}

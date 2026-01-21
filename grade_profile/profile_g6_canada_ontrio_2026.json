@@ -1,0 +1,157 @@
+{
+  "version": {
+    "id": "ontario_2026_g6_v1",
+    "name": "Ontario Curriculum Grade 6",
+    "region": "canada_ontario",
+    "year": 2026,
+    "revision": 1
+  },
+  "location1": "canada",
+  "location2": "ontario",
+  "grade": 6,
+  "mode": "training",
+  "language": "en-CA",
+  "totalScore": 100,
+
+  "categories": [
+    {
+      "name": "Knowledge & Understanding",
+      "weight": 25,
+      "criteria": [
+        "Clear topic focus",
+        "Strong understanding of the task",
+        "Writing stays on topic throughout"
+      ]
+    },
+    {
+      "name": "Thinking",
+      "weight": 25,
+      "criteria": [
+        "Logical organization of ideas",
+        "Development of ideas using reasons, explanations, and examples"
+      ]
+    },
+    {
+      "name": "Communication & Structure",
+      "weight": 35,
+      "criteria": [
+        "Clarity and flow of ideas",
+        "Clear paragraph structure",
+        "Effective introduction with a clear main idea or position",
+        "At least two body paragraphs",
+        "One main idea per body paragraph",
+        "Supporting sentences with explanations or examples",
+        "Clear conclusion that summarizes main ideas",
+        "Effective transitions between paragraphs"
+      ],
+      "requiredStructure": {
+        "introduction": true,
+        "minBodyParagraphs": 2,
+        "bodyParagraphRules": {
+          "oneMainIdea": true,
+          "minSupportingSentences": 3
+        },
+        "conclusion": true
+      }
+    },
+    {
+      "name": "Application",
+      "weight": 15,
+      "criteria": [
+        "Sentence variety and control",
+        "Grammar (subject–verb agreement, tense consistency)",
+        "Punctuation (commas, quotation marks when appropriate)",
+        "Spelling (common and grade-appropriate words)",
+        "Vocabulary use (precise and appropriate)"
+      ]
+    }
+  ],
+
+  "trainingRules": {
+    "structureRequired": true,
+    "missingStructureScoreCap": 65,
+    "rewriteRequiredBelow": 65
+  },
+
+  "scoreMeaning": [
+    {
+      "range": "85-100",
+      "description": "Well-structured writing with clear and developed ideas, meeting Grade 6 expectations"
+    },
+    {
+      "range": "70-84",
+      "description": "Clear structure with some areas for improvement, appropriate for Grade 6"
+    },
+    {
+      "range": "60-69",
+      "description": "Structure present but uneven or underdeveloped; revision required at Grade 6 level"
+    },
+    {
+      "range": "0-59",
+      "description": "Significant gaps in Grade 6 writing fundamentals"
+    }
+  ],
+
+  "gradingPrinciples": [
+    "Evaluate writing based on Grade 6 curriculum expectations only.",
+    "Do not apply Grade 7 or higher writing standards.",
+    "Balance structure, idea development, and clarity.",
+    "Apply spelling and language conventions according to the specified language variant."
+  ],
+
+  "redFlags": [
+    "missing_structure",
+    "too_short_for_grade",
+    "weak_development",
+    "unclear_paragraph_focus",
+    "repetitive_transitions"
+  ],
+
+  "topicProfile": {
+    "researchRequired": false,
+    "promptTone": "school_safe_neutral",
+    "readingLevel": "grade_6",
+
+    "supportedTaskTypes": [
+      "opinion",
+      "informative_explanatory",
+      "narrative_personal"
+    ],
+
+    "mixRules": {
+      "nTopics": 10,
+      "targetDistribution": {
+        "opinion": 4,
+        "informative_explanatory": 4,
+        "narrative_personal": 2
+      },
+      "avoidNearDuplicates": true
+    },
+
+    "softGuidelines": [
+      "Use topics familiar to students but allow for deeper thinking.",
+      "Prompts should be answerable without research.",
+      "Encourage opinions supported by clear reasons and examples.",
+      "Allow simple exploration of pros and cons without requiring formal counterarguments."
+    ],
+
+    "avoidTopics": [
+      "sexual orientation or gender identity",
+      "religion",
+      "race or ethnicity",
+      "political parties or elections",
+      "war or graphic violence",
+      "explicit sexual content",
+      "medical or mental health diagnoses"
+    ],
+
+    "outputFormat": {
+      "eachTopicIncludes": [
+        "taskType",
+        "topicTitle",
+        "prompt",
+        "structureHint"
+      ]
+    }
+  }
+}

@@ -141,9 +141,7 @@ export default function Home() {
   const [isLoadingTips, setIsLoadingTips] = useState(false);
   const [coachHelp, setCoachHelp] = useState<CoachHelpResponse | null>(null);
   const [isLoadingCoachHelp, setIsLoadingCoachHelp] = useState(false);
-  const [essay, setEssay] = useState(
-    'School uniforms should be required because they help students focus. When everyone wears the same clothes, students do not worry about brands or fashion. This can reduce bullying and make school feel fair. First, uniforms save time in the morning. Students do not spend too long choosing outfits. If they are ready faster, they arrive at school less stressed and can start learning right away. Second, uniforms can make students feel like they belong. When a class looks similar, it feels like a team. Students may take school rules more seriously and behave better. In conclusion, school uniforms are helpful because they reduce distractions, save time, and build a sense of community. Schools should consider using uniforms to improve learning.'
-  );
+  const [essay, setEssay] = useState('');
   const [evaluation, setEvaluation] = useState<EvaluationResponse | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -281,23 +279,32 @@ export default function Home() {
           </div>
 
           {/* Topic Mode Toggle */}
-          <div className="flex gap-2 mb-4">
-            <Button
-              variant={topicMode === 'generate' ? 'default' : 'outline'}
-              onClick={() => setTopicMode('generate')}
-              className={topicMode === 'generate' ? 'bg-gradient-to-r from-blue-600 to-purple-600' : ''}
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate Topic
-            </Button>
-            <Button
-              variant={topicMode === 'custom' ? 'default' : 'outline'}
-              onClick={() => setTopicMode('custom')}
-              className={topicMode === 'custom' ? 'bg-gradient-to-r from-blue-600 to-purple-600' : ''}
-            >
-              <PenLine className="w-4 h-4 mr-2" />
-              Write My Own
-            </Button>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">How would you like to start?</label>
+            <div className="inline-flex rounded-lg border-2 border-gray-200 p-1 bg-gray-100">
+              <button
+                onClick={() => setTopicMode('generate')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  topicMode === 'generate'
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                Generate a Topic for Me
+              </button>
+              <button
+                onClick={() => setTopicMode('custom')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  topicMode === 'custom'
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <PenLine className="w-4 h-4" />
+                I Have My Own Topic
+              </button>
+            </div>
           </div>
 
           {topicMode === 'generate' ? (
@@ -310,7 +317,7 @@ export default function Home() {
                       <SelectValue placeholder="Choose grade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+                      {Array.from({ length: 6 }, (_, i) => i + 3).map((grade) => (
                         <SelectItem key={grade} value={grade.toString()}>
                           Grade {grade}
                         </SelectItem>
@@ -322,7 +329,7 @@ export default function Home() {
                   onClick={handleGenerateTopic}
                   disabled={isGenerating}
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                 >
                   {isGenerating ? 'Generating...' : 'Generate Topic'}
                 </Button>
@@ -352,7 +359,7 @@ export default function Home() {
                       <SelectValue placeholder="Choose grade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+                      {Array.from({ length: 6 }, (_, i) => i + 3).map((grade) => (
                         <SelectItem key={grade} value={grade.toString()}>
                           Grade {grade}
                         </SelectItem>
@@ -380,7 +387,8 @@ export default function Home() {
           )}
         </Card>
 
-        {/* Section 2: Essay Writing */}
+        {/* Section 2: Essay Writing - only show when topic is ready */}
+        {((topicMode === 'generate' && currentTopic) || (topicMode === 'custom' && customTopic.trim())) && (
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           {/* Left: Essay Writing */}
           <Card className="lg:col-span-2 p-6 bg-white/80 backdrop-blur shadow-lg border-2">
@@ -411,7 +419,7 @@ export default function Home() {
                 size="lg"
                 className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
-                {isSessionLoading ? 'Loading...' : isEvaluating ? 'Evaluating...' : 'Evaluate Essay'}
+                {isSessionLoading ? 'Loading...' : isEvaluating ? 'Checking...' : "I'm Done!"}
               </Button>
             </div>
           </Card>
@@ -548,6 +556,7 @@ export default function Home() {
             </div>
           </Card>
         </div>
+        )}
 
         {/* Section 3: Evaluation Results */}
         {evaluation && (

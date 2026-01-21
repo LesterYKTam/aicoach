@@ -192,9 +192,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const grade = Number(body.grade ?? 7);
 
-    if (!Number.isFinite(grade) || grade < 1 || grade > 12) {
+    if (!Number.isFinite(grade) || grade < 3 || grade > 8) {
       return NextResponse.json(
-        { ok: false, error: 'grade must be a number between 1 and 12' },
+        { ok: false, error: 'grade must be a number between 3 and 8' },
         { status: 400 }
       );
     }

@@ -1,14 +1,14 @@
 {
   "version": {
-    "id": "ontario_2026_g5_v1",
-    "name": "Ontario Curriculum Grade 5",
+    "id": "ontario_2026_g4_v1",
+    "name": "Ontario Curriculum Grade 4",
     "region": "canada_ontario",
     "year": 2026,
     "revision": 1
   },
   "location1": "canada",
   "location2": "ontario",
-  "grade": 5,
+  "grade": 4,
   "mode": "training",
   "language": "en-CA",
   "totalScore": 100,
@@ -16,20 +16,19 @@
   "categories": [
     {
       "name": "Knowledge & Understanding",
-      "weight": 20,
+      "weight": 25,
       "criteria": [
         "Topic clarity",
         "Understanding of the task",
-        "Writing stays on topic"
+        "Writing stays mostly on topic"
       ]
     },
     {
       "name": "Thinking",
       "weight": 20,
       "criteria": [
-        "Organization of ideas",
-        "Development of ideas",
-        "Use of reasons, examples, or explanations"
+        "Basic organization of ideas",
+        "Development of ideas using simple reasons or details"
       ]
     },
     {
@@ -37,17 +36,17 @@
       "weight": 35,
       "criteria": [
         "Clarity of ideas",
-        "Logical paragraph structure",
+        "Clear paragraph structure",
         "Effective introduction",
-        "At least two body paragraphs",
-        "One main idea per body paragraph",
-        "Supporting sentences in each body paragraph",
+        "At least one body paragraph",
+        "Main idea in each paragraph",
+        "Supporting sentences in body paragraph(s)",
         "Clear conclusion",
-        "Transitions between ideas and paragraphs"
+        "Simple transitions between ideas"
       ],
       "requiredStructure": {
         "introduction": true,
-        "minBodyParagraphs": 2,
+        "minBodyParagraphs": 1,
         "bodyParagraphRules": {
           "oneMainIdea": true,
           "minSupportingSentences": 2
@@ -57,13 +56,13 @@
     },
     {
       "name": "Application",
-      "weight": 25,
+      "weight": 20,
       "criteria": [
-        "Grammar",
+        "Grammar (basic sentence control)",
         "Capitalization",
-        "Punctuation",
-        "Spelling",
-        "Vocabulary use (age-appropriate)"
+        "Punctuation (periods, question marks)",
+        "Spelling (high-frequency and familiar words)",
+        "Vocabulary use (simple, age-appropriate)"
       ]
     }
   ],
@@ -77,26 +76,27 @@
   "scoreMeaning": [
     {
       "range": "85-100",
-      "description": "Structure mastered and strong overall writing, as appropriate for the student's grade"
+      "description": "Clear structure and well-developed ideas, appropriate for Grade 4 expectations"
     },
     {
       "range": "70-84",
-      "description": "Structure present but needs refinement, as appropriate for the student's grade"
+      "description": "Structure present with some weaknesses, appropriate for Grade 4 expectations"
     },
     {
       "range": "60-69",
-      "description": "Structure incomplete; rewrite required, based on grade-level expectations"
+      "description": "Structure incomplete or uneven; revision required at Grade 4 level"
     },
     {
       "range": "0-59",
-      "description": "Major gaps in grade-level writing fundamentals"
+      "description": "Major gaps in Grade 4 writing fundamentals"
     }
   ],
 
   "gradingPrinciples": [
-    "All evaluations must be based on expectations appropriate for the student's grade level.",
-    "Do not apply higher-grade or adult writing standards.",
-    "Apply spelling, vocabulary, and language conventions according to the specified language variant."
+    "Evaluate writing based on Grade 4 curriculum expectations only.",
+    "Do not apply Grade 5 or higher writing standards.",
+    "Focus on clarity and structure over sophistication.",
+    "Apply spelling and language conventions according to the specified language variant."
   ],
 
   "redFlags": [
@@ -104,13 +104,13 @@
     "too_short_for_grade",
     "weak_supporting_details",
     "limited_development",
-    "simple_sentence_structure"
+    "run_on_sentences"
   ],
 
   "topicProfile": {
     "researchRequired": false,
     "promptTone": "school_safe_neutral",
-    "readingLevel": "grade_5",
+    "readingLevel": "grade_4",
 
     "supportedTaskTypes": [
       "opinion_simple",
@@ -121,18 +121,18 @@
     "mixRules": {
       "nTopics": 10,
       "targetDistribution": {
-        "opinion_simple": 4,
+        "opinion_simple": 3,
         "informative_explanatory": 4,
-        "narrative_personal": 2
+        "narrative_personal": 3
       },
       "avoidNearDuplicates": true
     },
 
     "softGuidelines": [
-      "Prefer concrete, everyday topics connected to student life (school, home, hobbies, friends).",
-      "Topics should be answerable without external research.",
-      "Keep prompts simple and specific (avoid abstract issues).",
-      "Avoid prompts that require strong counterarguments; focus on clear reasons and examples."
+      "Use familiar, concrete topics connected to everyday life.",
+      "Prompts should be answerable without research.",
+      "Encourage simple opinions supported by one or two reasons.",
+      "Avoid abstract or complex social issues."
     ],
 
     "avoidTopics": [

@@ -7,7 +7,7 @@
     "revision": 1
   },
   "location1": "canada",
-  "location2": "ontrio",
+  "location2": "ontario",
   "grade": 7,
   "mode": "training",
   "language": "en-CA",
@@ -77,7 +77,7 @@
   "trainingRules": {
     "structureRequired": true,
     "missingStructureScoreCap": 65,
-    "rewriteRequiredBelow": 70,
+    "rewriteRequiredBelow": 65,
     "counterpointMissingPenalty": {
       "enabled": true,
       "deductPoints": 10,
