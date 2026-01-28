@@ -19,6 +19,14 @@ function getDeviceId(): string {
   return deviceId;
 }
 
+function getBrowserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return 'America/Toronto'; // Default fallback
+  }
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -49,11 +57,12 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // Create account
+      // Create account with detected timezone
+      const timezone = getBrowserTimezone();
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, deviceId }),
+        body: JSON.stringify({ email, password, deviceId, timezone }),
       });
 
       const data = await res.json();

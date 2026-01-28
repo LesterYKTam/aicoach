@@ -1,0 +1,361 @@
+Architecture Notes v1.1 — AI Writing Coach (Ontario, Grades 3–12)
+
+Last updated: 2026-01-21
+Scope: Writing Coach MVP + Parent Mode + Tutor Batch Mode (two workflows sharing one core engine)
+
+----------------------------------------------------------------------
+0) Snapshot (What’s true right now)
+----------------------------------------------------------------------
+
+App: AI writing coach for Ontario students.
+
+Supported grades: 3–12 (Grades 1–2 intentionally excluded).
+
+Mode: training-first; structure is enforced more strictly than “grading-first”.
+
+Grading schemas completed (JSON profiles): G3, G4, G5, G6, G8
+- Each grade has a self-contained JSON profile (duplication is intentional).
+
+Coaching model:
+- Static hard requirements (must-have checklist expectations)
+- Dynamic, draft-aware coach feedback (AI selects issues)
+- Wording is controlled via templates (AI does not freely “talk”)
+- Feedback is on-demand via “Ask Coach for Help” in student flow
+
+Parent Mode:
+- Read-only
+- Focus: growth, habits, grade-fit
+- No sentence-level critique
+- No free-text “Ask AI” box (guided question buttons only)
+
+Tutor Mode (separate operation):
+- Students do NOT use the app
+- Tutor bulk-imports student roster and student work
+- System generates feedback in batch
+- Tutor can tune feedback parameters (depth, focus areas, strictness, tone, format), but cannot redefine standards
+
+Next task (paused earlier): Parent account system design (Family account + child profiles + student PIN)
+
+----------------------------------------------------------------------
+1) Product Vision
+----------------------------------------------------------------------
+
+Build an app that measurably improves student writing by:
+- making expectations visible (checklist),
+- providing actionable coaching (2–3 next steps),
+- using stored history to give grounded progress-aware feedback,
+- supporting parents with growth-oriented dashboards,
+- supporting tutors with efficient batch workflows.
+
+Success metric for MVP:
+After 1 month of real use, writing improves measurably and the student stays motivated to write.
+
+----------------------------------------------------------------------
+2) Two Distinct Workflows (share the same engine)
+----------------------------------------------------------------------
+
+2.1 Student Flow (Training-first)
+- Generate a task/topic with requirements
+- Student writes draft
+- Student requests feedback (“Ask Coach for Help”)
+- System returns:
+  - Student-facing coaching feedback
+  - Parent-facing summary (separate rendering)
+
+2.2 Tutor Flow (Batch / Offline)
+- Tutor logs in (email)
+- Tutor imports student roster (bulk)
+- Tutor uploads student work (bulk or single)
+- Tutor selects feedback parameters (see Section 6)
+- System generates structured feedback + exports
+- Tutor may optionally edit/approve before sharing/export (recommended)
+
+----------------------------------------------------------------------
+3) Key Product Principles
+----------------------------------------------------------------------
+
+3.1 Feedback quality is the #1 priority
+- The app lives or dies on consistent, helpful feedback.
+
+3.2 Actionable, limited next steps
+- 2–3 next steps max to avoid overwhelm.
+
+3.3 Encouragement is mandatory and evidence-based
+- Praise must cite observable behaviors from the draft and/or grounded trends from history.
+
+3.4 Two audiences, two renderings
+- One canonical evaluation → multiple views:
+  - Student view: encouraging, simple, forward-looking
+  - Parent view: honest, expectation-oriented, growth/habits
+  - Tutor view: deeper details and operational formats
+
+3.5 Visible requirements anchor writing and feedback
+- UI shows a grade-adjusted checklist (must match what evaluator uses).
+
+3.6 Guardrails
+- Parent mode: no sentence-level critique, no free-text prompt box.
+- Tutor mode: tuning is allowed, but “standards” remain system-owned.
+
+----------------------------------------------------------------------
+4) Curriculum / Grade Expectations Strategy
+----------------------------------------------------------------------
+
+4.1 Grade ≠ expectation (future-proofing)
+- Different regions can map “Grade 5” differently.
+
+4.2 Student profile includes curriculum context
+- Default for MVP: Ontario (e.g., curriculumCode: CA-ON-PUBLIC)
+
+4.3 Config-driven requirements
+- Requirements are stored/configured (JSON), not hard-coded into UI/prompt.
+
+4.4 Syllabus citations (later)
+- If needed, use curated offline expectation references (no runtime web lookups).
+
+----------------------------------------------------------------------
+5) System Architecture (High Level)
+----------------------------------------------------------------------
+
+Platform: AWS-first for MVP speed; keep cloud-agnostic seams where possible.
+
+Compute: AWS Lambda (stateless handlers)
+API: API Gateway → Lambda
+
+Data store:
+- “System memory” must persist: profiles, tasks, submissions, feedback, metrics
+- Note: earlier drafts referenced PostgreSQL; current implementation may use DynamoDB via AWS SAM (confirm per repo).
+  - Either DB choice is fine; the key is the logical model + query needs:
+    - Student history retrieval for snapshots
+    - Tutor batch operations + exports
+    - Progress metrics aggregation
+
+Secrets:
+- SSM Parameter Store / Secrets Manager for OpenAI key + DB credentials
+
+Observability:
+- CloudWatch logs
+- Store model/prompt/rubric versions on every feedback result
+- Avoid logging raw student text unless necessary (privacy)
+
+AI Provider:
+- OpenAI for v1
+- Provider abstraction to replay later across models (Claude/Gemini/etc.)
+
+----------------------------------------------------------------------
+6) Tutor Mode Parameters (Controlled “dials”, not free prompting)
+----------------------------------------------------------------------
+
+Core rule:
+- Tutors can tune *how* feedback is generated (perimeter),
+  but cannot redefine curriculum standards or rubric definitions.
+
+Recommended tutor-adjustable parameters:
+- depth: light | standard | detailed
+- focusAreas: list of categories to emphasize (e.g., structure, ideas, clarity, conventions, revision)
+- strictness: lenient | grade-standard | high-expectation (tolerance band)
+- tone: supportive | neutral | direct (pre-defined persona)
+- outputFormat: student-facing | tutor-notes | export-summary
+- optional: “limitNextSteps”: 1–3
+
+Implementation pattern:
+- Parameterized prompt contract (typed fields), not tutor-entered instructions.
+
+----------------------------------------------------------------------
+7) Data Model (Conceptual)
+----------------------------------------------------------------------
+
+Support multi-coach later via coachType.
+
+7.1 StudentProfile
+- id
+- displayName (nickname or roster label)
+- gradeLevel (3–12)
+- curriculumCode (default CA-ON-PUBLIC)
+- language (default en-CA)
+- ownerType: parent | tutor (v1: exactly one owner)
+- ownerId: parentAccountId | tutorAccountId
+- createdAt
+
+7.2 Task (Assignment)
+- id
+- studentId
+- coachType (writing)
+- taskSpec (JSON) {prompt, genre, targetWords, structureRequirements, checklist}
+- createdAt
+- rubricVersion
+- promptVersion
+
+7.3 Submission
+- id
+- taskId (or assignmentId)
+- studentId
+- coachType
+- responseSpec (JSON) {text}
+- derived stats: wordCount, sentenceCount (optional)
+- createdAt
+- source: student_app | tutor_import
+
+7.4 FeedbackResult (Canonical + Renderings)
+- id
+- submissionId
+- studentId
+- coachType
+- query-friendly columns/fields (for progress):
+  - overallBand or overallScore
+  - category scores / bands
+  - expectation bands (below|approaching|meeting|above)
+  - deltas vs previous (if snapshot available)
+  - strengthTags[], weaknessTags[], focusGoals[]
+- resultSpec (JSON): full structured output
+- renderedViews (JSON): {studentView, parentView, tutorView?}
+- studentSnapshotUsed (JSON)
+- modelProvider, modelName, promptVersion, rubricVersion
+- latency/token usage (if available)
+- createdAt
+
+7.5 Accounts (Roadmap)
+ParentAccount (Family)
+- id, email, auth fields, createdAt
+- children: StudentProfiles (ownerType=parent)
+
+TutorAccount (Workspace)
+- id, email, orgName (optional), createdAt
+- roster: StudentProfiles (ownerType=tutor)
+
+7.6 Tutor Batch Import (Operational Tables)
+- TutorRosterImport (id, tutorId, uploadedAt, status, counts, errors)
+- TutorWorkImport (id, tutorId, uploadedAt, status, mapping to students/submissions)
+
+----------------------------------------------------------------------
+8) StudentSnapshot (LLM Memory Payload)
+----------------------------------------------------------------------
+
+Generated from stored history before evaluation.
+
+Contains (small + consistent):
+- last category scores/bands
+- trends/deltas (recent window)
+- top recurring issues (<=3)
+- top strengths (<=2)
+- recent focus goals (<=2)
+
+Purpose:
+- Prevent hallucinated “progress” claims
+- Enable grounded comparisons (“more consistent conclusion than last time”)
+
+----------------------------------------------------------------------
+9) Feedback Output Contracts
+----------------------------------------------------------------------
+
+9.1 Student View (training-first)
+- 1–2 sentence encouragement (specific)
+- strengths (2 bullets)
+- next steps (2–3 bullets, actionable)
+- optional: micro-example (single sentence) only if safe (no full rewrites)
+- progress mention only if grounded in snapshot
+
+9.2 Parent View (dashboard-aligned)
+- Growth/habits summary
+- Grade-fit indicators (meeting/approaching/etc.)
+- Focus on patterns, not sentence corrections
+- No sentence-level critique
+- No free-text parent prompt box:
+  - Only guided questions → fixed templates
+
+9.3 Tutor View (batch operations)
+- Deeper breakdowns allowed
+- Exportable formats
+- Parameterized by tutor controls (Section 6)
+- Optionally include “tutor notes” separate from student-facing feedback
+
+----------------------------------------------------------------------
+10) Parent Mode “Ask Coach” (No Textbox)
+----------------------------------------------------------------------
+
+Design rule:
+- Parents cannot type arbitrary questions.
+
+Implementation:
+- Guided question buttons/cards only (pre-defined intents), e.g.:
+  - Progress & growth
+  - Habits & process
+  - Grade expectations
+  - How to support at home
+
+Each button maps to:
+- fixed intent id
+- fixed prompt template
+- safe data slice (aggregates only; no student text)
+
+----------------------------------------------------------------------
+11) API Surface (Conceptual)
+----------------------------------------------------------------------
+
+Student flow (minimal):
+- POST /topic   → returns task prompt + checklist
+- POST /submit  → stores submission, generates feedback, returns views
+- Optional: GET /students/:id/history or /progress (later)
+
+Parent flow:
+- GET /parent/dashboard
+- GET /parent/insights (guided intents only)
+
+Tutor flow:
+- POST /tutor/roster/import
+- POST /tutor/work/import
+- POST /tutor/feedback/run (with parameters)
+- GET /tutor/exports/:batchId
+
+(Exact routes may differ based on current implementation; keep the contracts stable.)
+
+----------------------------------------------------------------------
+12) Versioning, Privacy, and Observability
+----------------------------------------------------------------------
+
+Version everything on FeedbackResult:
+- modelProvider, modelName
+- promptVersion, rubricVersion
+- schema/profile version
+- parameter settings (tutor mode)
+
+Privacy:
+- Do not log raw student text in app logs unless required
+- Keep data retention policy explicit (later)
+
+Observability:
+- latency, token usage, error codes for troubleshooting + cost control
+
+----------------------------------------------------------------------
+13) Roadmap (Updated)
+----------------------------------------------------------------------
+
+Phase 1: Student + Parent MVP
+- Student writing + on-demand coaching
+- Parent dashboard read-only
+- Parent guided “Ask Coach” (no textbox)
+- Family account + child profiles + student PIN (design pending)
+
+Phase 2: Tutor Batch Product
+- Tutor accounts
+- Bulk roster import + work import
+- Parameterized feedback controls
+- Export/approval workflow
+
+Phase 3: Multi-curriculum + Reports
+- More grades completed (7, 9–12)
+- Curriculum library expansion
+- Parent progress charts + summaries
+- Tutor presets and cohorts (optional)
+
+Phase 4: Other Coaches
+- Math Coach reusing task/submission/feedback framework (different rubrics)
+
+----------------------------------------------------------------------
+14) Open Questions (For Next Sessions)
+----------------------------------------------------------------------
+
+- DB choice confirmation (Postgres vs DynamoDB) and query strategy for snapshots + dashboards
+- Exact scoring scale and how it maps to expectation bands by grade
+- Tutor export formats (PDF vs LMS-friendly vs plain text)
+- Whether tutors can edit AI feedback directly (recommended: yes, tracked)
+- “Ownership” rules for student profile (v1: attach to exactly one authority: parent OR tutor)

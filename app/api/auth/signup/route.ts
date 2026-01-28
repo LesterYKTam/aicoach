@@ -5,7 +5,7 @@ import { hashPassword } from '@/lib/password';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, deviceId } = body;
+    const { email, password, deviceId, timezone } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -48,10 +48,14 @@ export async function POST(request: Request) {
     // Hash password and create user
     const passwordHash = await hashPassword(password);
 
+    // Use provided timezone or default to America/Toronto
+    const userTimezone = timezone || 'America/Toronto';
+
     const user = await prisma.user.create({
       data: {
         email: normalizedEmail,
         passwordHash,
+        timezone: userTimezone,
       },
     });
 

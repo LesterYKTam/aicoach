@@ -11,6 +11,7 @@ model User {
   id           String    @id @default(uuid())
   email        String    @unique
   passwordHash String
+  timezone     String    @default("America/Toronto")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   profiles     Profile[]
@@ -49,6 +50,10 @@ model Submission {
   sessionId String
   essayText String
 
+  // Timezone tracking for reports
+  localDate DateTime? @db.Date    // User's local date at submission time
+  timezone  String?               // Timezone used: "America/Toronto"
+
   // Grading metadata
   gradeLevel      Int?
   rubricVersionId String?
@@ -86,4 +91,5 @@ model Submission {
   @@index([sessionId, createdAt])
   @@index([score])
   @@index([rubricVersionId])
+  @@index([localDate])
 }

@@ -53,6 +53,14 @@ function getDeviceId(): string {
   return deviceId;
 }
 
+function getBrowserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return 'America/Toronto';
+  }
+}
+
 export function useWritingSession() {
   const { data: session, status: authStatus } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -159,13 +167,15 @@ export function useWritingSession() {
         }
       }
 
-      // Create submission
+      // Create submission with timezone for local date tracking
+      const timezone = getBrowserTimezone();
       const subRes = await fetch('/api/submission/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId: currentSession.id,
           essayText,
+          timezone,
         }),
       });
       const subData = await subRes.json();
